@@ -14,23 +14,13 @@ public class ClientDemo {
             OutputStream os = socket.getOutputStream();
             //3.把低级的字节流包装成打印流
             PrintStream ps = new PrintStream(os);
-
-            Scanner sc = new Scanner(System.in);
+            while (true) {
+                Scanner sc = new Scanner(System.in);
                 System.out.println("请输入:");
                 String msg = sc.nextLine();
                 ps.println(msg);
                 ps.flush();
-
-            InputStream is = socket.getInputStream();
-            InputStreamReader isr = new InputStreamReader(is);
-            BufferedReader br = new BufferedReader(isr);
-            String info = null;
-            System.out.println("服务器发来消息说：" + br.readLine());
-
-            System.out.println("请输入:");
-            msg = sc.nextLine();
-            ps.println(msg);
-            ps.flush();
+            }
 
 
         } catch (IOException e) {

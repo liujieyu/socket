@@ -4,9 +4,8 @@ import java.util.Date;
 //实时水位采集
 public class StRsvrR {
     private Integer id;    //主键ID
-    private String stnm;   //站点名称
     private String stcd;   //站点编号
-    private Date tm;       //采集时间
+    private Date tm;     //采集时间
     private Float rz;      //水位
     private Float w;       //库容
     private String rwptn;  //水势
@@ -17,14 +16,6 @@ public class StRsvrR {
 
     public void setId(Integer id) {
         this.id = id;
-    }
-
-    public String getStnm() {
-        return stnm;
-    }
-
-    public void setStnm(String stnm) {
-        this.stnm = stnm;
     }
 
     public String getStcd() {
