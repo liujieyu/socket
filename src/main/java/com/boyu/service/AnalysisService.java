@@ -2,6 +2,8 @@ package com.boyu.service;
 
 import com.boyu.dao.WaterARainDao;
 import com.boyu.pojo.StPptnR;
+import com.boyu.pojo.StRsvrR;
+import com.boyu.pojo.WaterParam;
 import org.apache.log4j.Logger;
 
 import java.math.BigDecimal;
@@ -113,4 +115,44 @@ public class AnalysisService {
         }
     }
     //加时报雨情信息分析
+
+
+    //小时报水情信息分析
+    public void wateranalysis(String stcd,String tmstr,BigDecimal[] frsvr){
+        //实时水情采集
+        StRsvrR realwater=new StRsvrR();
+        //历史水情采集
+        List<StRsvrR> hislist=new ArrayList<StRsvrR>();
+        //小时水情采集
+        StRsvrR hourwater=new StRsvrR();
+        //日水情采集
+        StRsvrR daywater=new StRsvrR();
+        //月水情采集
+        StRsvrR monwater=new StRsvrR();
+        //站点预警信息采集
+
+        try {
+            Date nowtm=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(tmstr);
+            Date ltm=new Date(nowtm.getTime()-1*60*60*1000);
+            String ltmstr=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(ltm);
+            String datestr=ltmstr.split(" ")[0];
+            String timestr=ltmstr.split(" ")[1];
+            int year=Integer.parseInt(datestr.substring(0,4));
+            int mon=Integer.parseInt(datestr.substring(6,8));
+            int hour=Integer.parseInt(timestr.substring(0,2));
+            Date date=new SimpleDateFormat("yyyy-MM-dd").parse(ltmstr);
+            WaterParam param=waterARainDao.getWaterParam(stcd,date,hour,year,mon);
+            if(param.getJssign().length()==0 && param.getJssign().equals("0")){
+                BigDecimal minrz=frsvr[0],maxrz=frsvr[0],sumrz=frsvr[0];
+                Date mindate,maxdate;
+                for(int i=0;i<frsvr.length;i++){
+
+                }
+            }else{
+
+            }
+        } catch (ParseException e) {
+            logger.error("采集日期转换错误",e);
+        }
+    }
 }

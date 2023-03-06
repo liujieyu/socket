@@ -1,11 +1,14 @@
 package com.boyu.pojo;
 
 import java.math.BigDecimal;
+import java.util.Date;
 
 /**
  * 水位采集前需要的参数
  */
 public class WaterParam {
+    private Date lastdate;     //上一条记录的日期
+    private  BigDecimal lastrz;//上一条记录的水位
     private String jssign;     //加时报标识
     private BigDecimal fwl;    //4-6月汛限水位
     private BigDecimal fwl79;  //7-9月汛限水位
@@ -17,6 +20,7 @@ public class WaterParam {
     private BigDecimal dminwl; //日最低水位
     private BigDecimal mmaxwl; //月最高水位
     private BigDecimal mminwl; //月最低水位
+    private Integer alarm;     //预警等级
 
     public String getJssign() {
         return jssign;
@@ -104,5 +108,29 @@ public class WaterParam {
 
     public void setMminwl(BigDecimal mminwl) {
         this.mminwl = mminwl;
+    }
+
+    public BigDecimal getLastrz() {
+        return lastrz;
+    }
+
+    public void setLastrz(BigDecimal lastrz) {
+        this.lastrz = lastrz;
+    }
+
+    public Date getLastdate() {
+        return lastdate;
+    }
+
+    public void setLastdate(Date lastdate) {
+        this.lastdate = lastdate;
+    }
+
+    public Integer getAlarm() {
+        return alarm;
+    }
+
+    public void setAlarm(Integer alarm) {
+        this.alarm = alarm;
     }
 }
