@@ -7,6 +7,7 @@ import com.boyu.pojo.StRsvrR;
 import com.boyu.pojo.WaterParam;
 import org.apache.log4j.Logger;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -197,6 +198,42 @@ public class WaterARainDao {
         }
         return param;
     }
+    //获取上小时历史表水位信息
+    public BigDecimal getRzByhistory(String stcd,Date lasttm){
+        Connection conn=C3p0Utils.getConnection();
+        PreparedStatement pstm;
+        ResultSet res;
+        BigDecimal rz=new BigDecimal(0);
+        try {
+            String find_sql="select RZ from ST_RSVR_R where TM=? and STCD=?";
+            pstm=conn.prepareStatement(find_sql);
+            pstm.setDate(1,new java.sql.Date(lasttm.getTime()));
+            pstm.setString(2,stcd);
+            res=pstm.executeQuery();
+            if(res.next()){
+                rz= res.getBigDecimal(1);
+            }
+            C3p0Utils.closeAll(conn,pstm,null);
+        } catch (SQLException e) {
+            logger.error(stcd+":获取历史水位失败！",e);
+        }
+        return rz;
+    }
+    //小时报水位采集(无数据录入)
+    public void insertHourWater(StRsvrR realwater){
+        Connection conn=C3p0Utils.getConnection();
+        PreparedStatement pstm;
+        try {
+            String sql_real="update ST_RSVR_R1 set JSSIGN=? where STCD=?";
+            pstm=conn.prepareStatement(sql_real);
+            pstm.setString(1,realwater.getJssign());
+            pstm.setString(2,realwater.getStcd());
+            pstm.executeUpdate();
+            C3p0Utils.closeAll(conn,pstm,null);
+        } catch (SQLException e) {
+            logger.error(realwater.getStcd()+":小时报实时水位采集失败！",e);
+        }
+    }
     //小时报水位采集
     public void insertHourWater(StRsvrR realwater, List<StRsvrR> hiswater, StRsvrR hourwater, StRsvrR datewater, StRsvrR monwater, StAlarmInfo alarminfo){
         Connection conn = C3p0Utils.getConnection();
@@ -204,18 +241,20 @@ public class WaterARainDao {
         try {
             conn.setAutoCommit(false);
             //实时水位表
-            String sql_real="update ST_RSVR_R1 set TM=?,RZ=?,CV=?,W=dbo.FUNC_GETKR(?,?),RWPTN=?,JSSIGN=?,ALARM=? where STCD=?";
-            pstm=conn.prepareStatement(sql_real);
-            pstm.setDate(1,new java.sql.Date(realwater.getTm().getTime()));
-            pstm.setBigDecimal(2,realwater.getRz());
-            pstm.setBigDecimal(3,realwater.getCv());
-            pstm.setBigDecimal(4,realwater.getRz());
-            pstm.setString(5,realwater.getStcd());
-            pstm.setInt(6,realwater.getRwptn());
-            pstm.setString(7,realwater.getJssign());
-            pstm.setInt(8,realwater.getAlarm());
-            pstm.setString(9,realwater.getStcd());
-            pstm.executeUpdate();
+            if(realwater!=null) {
+                String sql_real = "update ST_RSVR_R1 set TM=?,RZ=?,CV=?,W=dbo.FUNC_GETKR(?,?),RWPTN=?,JSSIGN=?,ALARM=? where STCD=?";
+                pstm = conn.prepareStatement(sql_real);
+                pstm.setDate(1, new java.sql.Date(realwater.getTm().getTime()));
+                pstm.setBigDecimal(2, realwater.getRz());
+                pstm.setBigDecimal(3, realwater.getCv());
+                pstm.setBigDecimal(4, realwater.getRz());
+                pstm.setString(5, realwater.getStcd());
+                pstm.setString(6, String.valueOf(realwater.getRwptn()));
+                pstm.setString(7, realwater.getJssign());
+                pstm.setInt(8, realwater.getAlarm());
+                pstm.setString(9, realwater.getStcd());
+                pstm.executeUpdate();
+            }
             //历史水位表
             if(hiswater!=null && hiswater.size()>0){
                 String sql_his="insert into ST_RSVR_R(STCD,TM,RZ,CV,W,RWPTN) values(?,?,?,?,dbo.FUNC_GETKR(?,?),?)";
@@ -228,7 +267,7 @@ public class WaterARainDao {
                     pstm.setBigDecimal(4,hisobj.getCv());
                     pstm.setBigDecimal(5,hisobj.getRz());
                     pstm.setString(6,hisobj.getStcd());
-                    pstm.setInt(7,hisobj.getRwptn());
+                    pstm.setString(7,String.valueOf(hisobj.getRwptn()));
                     if(hiswater.size()>1){
                         pstm.addBatch();
                     }
@@ -383,17 +422,17 @@ public class WaterARainDao {
                 pstm.executeUpdate();
             }
             //站点预警信息
-            if(alarminfo!=null){
+            if(alarminfo!=null && alarminfo.getStcd()!=null){
                 String alarm_sql="insert into ST_AlarmInfo(STCD,STTP,Alarm,TM,CONTENTS,MV,AlarmV)values(?,?,?,?,?,?,?)";
                 pstm=conn.prepareStatement(alarm_sql);
-                pstm.setString(1,alarminfo.getStcd());
-                pstm.setString(2,alarminfo.getSttp());
-                pstm.setInt(3,alarminfo.getAlarm());
-                pstm.setDate(4,new java.sql.Date(alarminfo.getTm().getTime()));
-                pstm.setString(5,alarminfo.getContent());
-                pstm.setBigDecimal(6,alarminfo.getMv());
-                pstm.setBigDecimal(7,alarminfo.getAlarmv());
-                pstm.executeUpdate();
+                    pstm.setString(1, alarminfo.getStcd());
+                    pstm.setString(2, alarminfo.getSttp());
+                    pstm.setInt(3, alarminfo.getAlarm());
+                    pstm.setDate(4, new java.sql.Date(alarminfo.getTm().getTime()));
+                    pstm.setString(5, alarminfo.getContent());
+                    pstm.setBigDecimal(6, alarminfo.getMv());
+                    pstm.setBigDecimal(7, alarminfo.getAlarmv());
+                    pstm.executeUpdate();
             }
             conn.commit();
             conn.setAutoCommit(true);

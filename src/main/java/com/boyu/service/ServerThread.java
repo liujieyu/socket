@@ -198,7 +198,8 @@ public class ServerThread implements Runnable {
         //实时降雨量采集
         service.rainanalysis(stcd,tm,drain,train,hrain,frain);
         //实时水位采集
-
+        service.wateranalysis(stcd,tm,frsvr);
+        //大坝安全监测数据采集
     }
     //加报解析33H
 }

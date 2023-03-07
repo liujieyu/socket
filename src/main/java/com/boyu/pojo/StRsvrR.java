@@ -10,7 +10,7 @@ public class StRsvrR {
     private BigDecimal rz;     //水位
     private BigDecimal w;      //库容  小时库容，日库容，月库容
     private BigDecimal cv;     //水位差
-    private int rwptn;      //水势
+    private char rwptn;      //水势
     private Date date;         //采集日期  yyyy-MM-dd
     private int hour;          //小时
     private int year;          //年
@@ -47,11 +47,11 @@ public class StRsvrR {
         this.tm = tm;
     }
 
-    public int getRwptn() {
+    public char getRwptn() {
         return rwptn;
     }
 
-    public void setRwptn(int rwptn) {
+    public void setRwptn(char rwptn) {
         this.rwptn = rwptn;
     }
 
