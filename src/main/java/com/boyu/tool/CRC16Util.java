@@ -80,4 +80,13 @@ public class CRC16Util {
         int highByte = (CRC & 0x000000ff) << 8;
         return lowByte | highByte;
     }
+
+    public static String formatWithMakingUp(String src) {
+        String formatstr="0000";
+        int delta = formatstr.length() - src.length();
+        if (delta <= 0) {
+            return src;
+        }
+        return formatstr.substring(0, delta) + src;
+    }
 }

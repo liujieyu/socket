@@ -1,6 +1,7 @@
 package com.boyu.dao;
 
 import com.boyu.dboper.C3p0Utils;
+import com.boyu.dboper.DruidUtils;
 import com.boyu.pojo.StAlarmInfo;
 import com.boyu.pojo.StPptnR;
 import com.boyu.pojo.StRsvrR;
@@ -26,7 +27,7 @@ public class WaterARainDao {
      */
     public int getSerialnumber(){
         int serialnumber=1;
-        Connection conn = C3p0Utils.getConnection();
+        Connection conn = DruidUtils.getConnection();
         PreparedStatement pstm;
         ResultSet res;
         String sql_find = "select NEXT VALUE FOR dbo.sequence_serialnum";
@@ -36,7 +37,7 @@ public class WaterARainDao {
             if (res.next()) {
                 serialnumber=res.getInt(1);
             }
-            C3p0Utils.closeAll(conn,pstm,res);
+            DruidUtils.closeAll(conn,pstm,res);
         } catch (SQLException e) {
             logger.error("获取流水号失败",e);
         }
@@ -50,7 +51,7 @@ public class WaterARainDao {
      */
     public StPptnR getRealRain(String stcd){
         StPptnR rain=new StPptnR();
-        Connection conn = C3p0Utils.getConnection();
+        Connection conn = DruidUtils.getConnection();
         PreparedStatement pstm;
         ResultSet res;
         String sql_find = "select TM,TOTAL,JSSIGN from ST_PPTN_R1 where STCD=?";
@@ -59,11 +60,11 @@ public class WaterARainDao {
             pstm.setString(1,stcd);
             res=pstm.executeQuery();
             if(res.next()){
-                rain.setTm(res.getDate(1));
+                rain.setTm(res.getTimestamp(1));
                 rain.setTotal(res.getBigDecimal(2));
                 rain.setJssign(res.getString(3));
             }
-            C3p0Utils.closeAll(conn,pstm,res);
+            DruidUtils.closeAll(conn,pstm,res);
         } catch (SQLException e) {
             logger.error(stcd+":获取实时雨情信息失败",e);
         }
@@ -74,21 +75,29 @@ public class WaterARainDao {
      * 插入小时报(加报)雨量采集数据
      */
     public void insertHourRain(StPptnR realinfo, List<StPptnR>hisinfo,List<StPptnR> upinfo){
-        Connection conn = C3p0Utils.getConnection();
+        Connection conn = DruidUtils.getConnection();
         PreparedStatement pstm;
         try {
             conn.setAutoCommit(false);
-            String sql_real="update ST_PPTN_R1 set TM=?,DRP=?,PDR=?,DYP=?,TOTAL=?,INTV=?,JSSIGN=? where STCD=?";
-            pstm=conn.prepareStatement(sql_real);
-            pstm.setDate(1,new java.sql.Date(realinfo.getTm().getTime()));
-            pstm.setBigDecimal(2,realinfo.getDrp());
-            pstm.setBigDecimal(3,realinfo.getPdr());
-            pstm.setBigDecimal(4,realinfo.getDyp());
-            pstm.setBigDecimal(5,realinfo.getTotal());
-            pstm.setBigDecimal(6,realinfo.getIntv());
-            pstm.setString(7,realinfo.getJssign());
-            pstm.setString(8,realinfo.getStcd());
-            pstm.execute();
+            if(realinfo.getPdr().doubleValue()==0){
+                String sql_real="update ST_PPTN_R1 set JSSIGN=? where STCD=?";
+                pstm = conn.prepareStatement(sql_real);
+                pstm.setString(1,realinfo.getJssign());
+                pstm.setString(2,realinfo.getStcd());
+                pstm.executeUpdate();
+            }else {
+                String sql_real = "update ST_PPTN_R1 set TM=?,DRP=?,PDR=?,DYP=?,TOTAL=?,INTV=?,JSSIGN=? where STCD=?";
+                pstm = conn.prepareStatement(sql_real);
+                pstm.setTimestamp(1, new java.sql.Timestamp(realinfo.getTm().getTime()));
+                pstm.setBigDecimal(2, realinfo.getDrp());
+                pstm.setBigDecimal(3, realinfo.getPdr());
+                pstm.setBigDecimal(4, realinfo.getDyp());
+                pstm.setBigDecimal(5, realinfo.getTotal());
+                pstm.setBigDecimal(6, realinfo.getIntv());
+                pstm.setString(7, realinfo.getJssign());
+                pstm.setString(8, realinfo.getStcd());
+                pstm.executeUpdate();
+            }
             if(upinfo!=null && upinfo.size()>0){
                 String sql_up="update ST_PPTN_R set DRP=? where STCD=? and TM=?";
                 pstm=conn.prepareStatement(sql_up);
@@ -96,7 +105,7 @@ public class WaterARainDao {
                     StPptnR uprain=upinfo.get(j);
                     pstm.setBigDecimal(1,uprain.getDrp());
                     pstm.setString(2,uprain.getStcd());
-                    pstm.setDate(3,new java.sql.Date(uprain.getTm().getTime()));
+                    pstm.setTimestamp(3,new java.sql.Timestamp(uprain.getTm().getTime()));
                     if(upinfo.size()>1){
                         pstm.addBatch();
                     }
@@ -114,7 +123,7 @@ public class WaterARainDao {
                 for(int i=0;i<hisinfo.size();i++){
                     StPptnR hisrain=hisinfo.get(i);
                     pstm.setString(1,hisrain.getStcd());
-                    pstm.setDate(2,new java.sql.Date(hisrain.getTm().getTime()));
+                    pstm.setTimestamp(2,new java.sql.Timestamp(hisrain.getTm().getTime()));
                     pstm.setBigDecimal(3,hisrain.getDrp());
                     pstm.setBigDecimal(4,hisrain.getDyp());
                     if(hisinfo.size()>1){
@@ -130,7 +139,7 @@ public class WaterARainDao {
             }
             conn.commit();
             conn.setAutoCommit(true);
-            C3p0Utils.closeAll(conn,pstm,null);
+            DruidUtils.closeAll(conn,pstm,null);
         } catch (SQLException e) {
             logger.error(realinfo.getStcd()+":小时报实时雨量采集失败！",e);
         }
@@ -147,7 +156,7 @@ public class WaterARainDao {
      */
     public WaterParam getWaterParam(String stcd, Date date,int hour,int year,int mon){
         WaterParam param=new WaterParam();
-        Connection conn = C3p0Utils.getConnection();
+        Connection conn = DruidUtils.getConnection();
         PreparedStatement pstm;
         ResultSet res;
         try {
@@ -192,7 +201,7 @@ public class WaterARainDao {
                              break;
                 }
             }
-            C3p0Utils.closeAll(conn,pstm,null);
+            DruidUtils.closeAll(conn,pstm,null);
         } catch (SQLException e) {
             logger.error(stcd+":实时水位参数获取失败！",e);
         }
@@ -200,20 +209,20 @@ public class WaterARainDao {
     }
     //获取上小时历史表水位信息
     public BigDecimal getRzByhistory(String stcd,Date lasttm){
-        Connection conn=C3p0Utils.getConnection();
+        Connection conn=DruidUtils.getConnection();
         PreparedStatement pstm;
         ResultSet res;
         BigDecimal rz=new BigDecimal(0);
         try {
             String find_sql="select RZ from ST_RSVR_R where TM=? and STCD=?";
             pstm=conn.prepareStatement(find_sql);
-            pstm.setDate(1,new java.sql.Date(lasttm.getTime()));
+            pstm.setTimestamp(1,new java.sql.Timestamp(lasttm.getTime()));
             pstm.setString(2,stcd);
             res=pstm.executeQuery();
             if(res.next()){
                 rz= res.getBigDecimal(1);
             }
-            C3p0Utils.closeAll(conn,pstm,null);
+            DruidUtils.closeAll(conn,pstm,null);
         } catch (SQLException e) {
             logger.error(stcd+":获取历史水位失败！",e);
         }
@@ -221,7 +230,7 @@ public class WaterARainDao {
     }
     //小时报水位采集(无数据录入)
     public void insertHourWater(StRsvrR realwater){
-        Connection conn=C3p0Utils.getConnection();
+        Connection conn=DruidUtils.getConnection();
         PreparedStatement pstm;
         try {
             String sql_real="update ST_RSVR_R1 set JSSIGN=? where STCD=?";
@@ -229,14 +238,14 @@ public class WaterARainDao {
             pstm.setString(1,realwater.getJssign());
             pstm.setString(2,realwater.getStcd());
             pstm.executeUpdate();
-            C3p0Utils.closeAll(conn,pstm,null);
+            DruidUtils.closeAll(conn,pstm,null);
         } catch (SQLException e) {
             logger.error(realwater.getStcd()+":小时报实时水位采集失败！",e);
         }
     }
     //小时报水位采集
     public void insertHourWater(StRsvrR realwater, List<StRsvrR> hiswater, StRsvrR hourwater, StRsvrR datewater, StRsvrR monwater, StAlarmInfo alarminfo){
-        Connection conn = C3p0Utils.getConnection();
+        Connection conn = DruidUtils.getConnection();
         PreparedStatement pstm;
         try {
             conn.setAutoCommit(false);
@@ -244,12 +253,12 @@ public class WaterARainDao {
             if(realwater!=null) {
                 String sql_real = "update ST_RSVR_R1 set TM=?,RZ=?,CV=?,W=dbo.FUNC_GETKR(?,?),RWPTN=?,JSSIGN=?,ALARM=? where STCD=?";
                 pstm = conn.prepareStatement(sql_real);
-                pstm.setDate(1, new java.sql.Date(realwater.getTm().getTime()));
+                pstm.setTimestamp(1, new java.sql.Timestamp(realwater.getTm().getTime()));
                 pstm.setBigDecimal(2, realwater.getRz());
                 pstm.setBigDecimal(3, realwater.getCv());
                 pstm.setBigDecimal(4, realwater.getRz());
                 pstm.setString(5, realwater.getStcd());
-                pstm.setString(6, String.valueOf(realwater.getRwptn()));
+                pstm.setString(6, realwater.getRwptn());
                 pstm.setString(7, realwater.getJssign());
                 pstm.setInt(8, realwater.getAlarm());
                 pstm.setString(9, realwater.getStcd());
@@ -262,12 +271,12 @@ public class WaterARainDao {
                 for(int i=0;i<hiswater.size();i++){
                     StRsvrR hisobj=hiswater.get(i);
                     pstm.setString(1,hisobj.getStcd());
-                    pstm.setDate(2,new java.sql.Date(hisobj.getTm().getTime()));
+                    pstm.setTimestamp(2,new java.sql.Timestamp(hisobj.getTm().getTime()));
                     pstm.setBigDecimal(3,hisobj.getRz());
                     pstm.setBigDecimal(4,hisobj.getCv());
                     pstm.setBigDecimal(5,hisobj.getRz());
                     pstm.setString(6,hisobj.getStcd());
-                    pstm.setString(7,String.valueOf(hisobj.getRwptn()));
+                    pstm.setString(7,hisobj.getRwptn());
                     if(hiswater.size()>1){
                         pstm.addBatch();
                     }
@@ -291,9 +300,9 @@ public class WaterARainDao {
                 pstm.setBigDecimal(4,hourwater.getRz());
                 pstm.setBigDecimal(5,hourwater.getCv());
                 pstm.setBigDecimal(6,hourwater.getMaxrz());
-                pstm.setDate(7,new java.sql.Date(hourwater.getMaxdate().getTime()));
+                pstm.setTimestamp(7,new java.sql.Timestamp(hourwater.getMaxdate().getTime()));
                 pstm.setBigDecimal(8,hourwater.getMinrz());
-                pstm.setDate(9,new java.sql.Date(hourwater.getMindate().getTime()));
+                pstm.setTimestamp(9,new java.sql.Timestamp(hourwater.getMindate().getTime()));
                 pstm.setBigDecimal(10,hourwater.getRz());
                 pstm.setString(11,hourwater.getStcd());
                 pstm.executeUpdate();
@@ -316,11 +325,11 @@ public class WaterARainDao {
                 pstm.setBigDecimal(2,hourwater.getCv());
                 if(hourwater.getMaxrz()!=null){
                     pstm.setBigDecimal(2+maxsign-1,hourwater.getMaxrz());
-                    pstm.setDate(2+maxsign,new java.sql.Date(hourwater.getMaxdate().getTime()));
+                    pstm.setTimestamp(2+maxsign,new java.sql.Timestamp(hourwater.getMaxdate().getTime()));
                 }
                 if(hourwater.getMinrz()!=null){
                     pstm.setBigDecimal(2+maxsign+minsign-1,hourwater.getMinrz());
-                    pstm.setDate(2+maxsign+minsign,new java.sql.Date(hourwater.getMindate().getTime()));
+                    pstm.setTimestamp(2+maxsign+minsign,new java.sql.Timestamp(hourwater.getMindate().getTime()));
                 }
                 pstm.setBigDecimal(3+maxsign+minsign,hourwater.getRz());
                 pstm.setString(4+maxsign+minsign,hourwater.getStcd());
@@ -339,9 +348,9 @@ public class WaterARainDao {
                 pstm.setDate(2,new java.sql.Date(datewater.getDate().getTime()));
                 pstm.setBigDecimal(3,datewater.getRz());
                 pstm.setBigDecimal(4,datewater.getMaxrz());
-                pstm.setDate(5,new java.sql.Date(datewater.getMaxdate().getTime()));
+                pstm.setTimestamp(5,new java.sql.Timestamp(datewater.getMaxdate().getTime()));
                 pstm.setBigDecimal(6,datewater.getMinrz());
-                pstm.setDate(7,new java.sql.Date(datewater.getMindate().getTime()));
+                pstm.setTimestamp(7,new java.sql.Timestamp(datewater.getMindate().getTime()));
                 pstm.setBigDecimal(8,datewater.getRz());
                 pstm.setString(9,datewater.getStcd());
                 pstm.executeUpdate();
@@ -362,11 +371,11 @@ public class WaterARainDao {
                 pstm.setBigDecimal(1,datewater.getRz());
                 if(datewater.getMaxrz()!=null){
                     pstm.setBigDecimal(1+maxsign-1,datewater.getMaxrz());
-                    pstm.setDate(1+maxsign,new java.sql.Date(datewater.getMaxdate().getTime()));
+                    pstm.setTimestamp(1+maxsign,new java.sql.Timestamp(datewater.getMaxdate().getTime()));
                 }
                 if(datewater.getMinrz()!=null){
                     pstm.setBigDecimal(1+maxsign+minsign-1,datewater.getMinrz());
-                    pstm.setDate(1+maxsign+minsign,new java.sql.Date(datewater.getMindate().getTime()));
+                    pstm.setTimestamp(1+maxsign+minsign,new java.sql.Timestamp(datewater.getMindate().getTime()));
                 }
                 pstm.setBigDecimal(2+maxsign+minsign,datewater.getRz());
                 pstm.setString(3+maxsign+minsign,datewater.getStcd());
@@ -385,9 +394,9 @@ public class WaterARainDao {
                 pstm.setInt(3,monwater.getMon());
                 pstm.setBigDecimal(4,monwater.getRz());
                 pstm.setBigDecimal(5,monwater.getMaxrz());
-                pstm.setDate(6,new java.sql.Date(monwater.getMaxdate().getTime()));
+                pstm.setTimestamp(6,new java.sql.Timestamp(monwater.getMaxdate().getTime()));
                 pstm.setBigDecimal(7,monwater.getMinrz());
-                pstm.setDate(8,new java.sql.Date(monwater.getMindate().getTime()));
+                pstm.setTimestamp(8,new java.sql.Timestamp(monwater.getMindate().getTime()));
                 pstm.setBigDecimal(9,monwater.getRz());
                 pstm.setString(10,monwater.getStcd());
                 pstm.executeUpdate();
@@ -408,11 +417,11 @@ public class WaterARainDao {
                 pstm.setBigDecimal(1,monwater.getRz());
                 if(monwater.getMaxrz()!=null){
                     pstm.setBigDecimal(1+maxsign-1,monwater.getMaxrz());
-                    pstm.setDate(1+maxsign,new java.sql.Date(monwater.getMaxdate().getTime()));
+                    pstm.setTimestamp(1+maxsign,new java.sql.Timestamp(monwater.getMaxdate().getTime()));
                 }
                 if(monwater.getMinrz()!=null){
                     pstm.setBigDecimal(1+maxsign+minsign-1,monwater.getMinrz());
-                    pstm.setDate(1+maxsign+minsign,new java.sql.Date(monwater.getMindate().getTime()));
+                    pstm.setTimestamp(1+maxsign+minsign,new java.sql.Timestamp(monwater.getMindate().getTime()));
                 }
                 pstm.setBigDecimal(2+maxsign+minsign,monwater.getRz());
                 pstm.setString(3+maxsign+minsign,monwater.getStcd());
@@ -428,7 +437,7 @@ public class WaterARainDao {
                     pstm.setString(1, alarminfo.getStcd());
                     pstm.setString(2, alarminfo.getSttp());
                     pstm.setInt(3, alarminfo.getAlarm());
-                    pstm.setDate(4, new java.sql.Date(alarminfo.getTm().getTime()));
+                    pstm.setTimestamp(4, new java.sql.Timestamp(alarminfo.getTm().getTime()));
                     pstm.setString(5, alarminfo.getContent());
                     pstm.setBigDecimal(6, alarminfo.getMv());
                     pstm.setBigDecimal(7, alarminfo.getAlarmv());
@@ -436,7 +445,7 @@ public class WaterARainDao {
             }
             conn.commit();
             conn.setAutoCommit(true);
-            C3p0Utils.closeAll(conn,pstm,null);
+            DruidUtils.closeAll(conn,pstm,null);
         } catch (SQLException e) {
             logger.error(realwater.getStcd()+":小时报实时水位采集失败！",e);
         }
@@ -444,7 +453,7 @@ public class WaterARainDao {
     }
 
     public void findStRsvrR() {
-        Connection conn = C3p0Utils.getConnection();
+        Connection conn = DruidUtils.getConnection();
         PreparedStatement pstm;
         ResultSet res;
 

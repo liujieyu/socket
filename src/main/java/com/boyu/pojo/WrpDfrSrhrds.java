@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 /**
- * 表面变形水平位移监测数据
+ * 表面变形水平位移、垂直位移监测数据
  */
 public class WrpDfrSrhrds {
     private Integer id;       //主键ID
@@ -14,6 +14,8 @@ public class WrpDfrSrhrds {
     private BigDecimal yhrds; //Y向水平位移
     private BigDecimal eslg;  //经度
     private BigDecimal nrlt;  //纬度
+    private BigDecimal vrds;  //垂直位移
+    private BigDecimal inel;  //测量高程
 
     public Integer getId() {
         return id;
@@ -69,5 +71,21 @@ public class WrpDfrSrhrds {
 
     public void setNrlt(BigDecimal nrlt) {
         this.nrlt = nrlt;
+    }
+
+    public BigDecimal getVrds() {
+        return vrds;
+    }
+
+    public void setVrds(BigDecimal vrds) {
+        this.vrds = vrds;
+    }
+
+    public BigDecimal getInel() {
+        return inel;
+    }
+
+    public void setInel(BigDecimal inel) {
+        this.inel = inel;
     }
 }

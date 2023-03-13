@@ -58,13 +58,29 @@ public class HEXUtil {
         sb.append("20");
         sb.append(Integer.toHexString(0xFF & bytes[0]));
         sb.append("-");
-        sb.append(Integer.toHexString(0xFF & bytes[1]));
+        String mon=Integer.toHexString(0xFF & bytes[1]);
+        if(mon.length()==1){
+            sb.append("0");
+        }
+        sb.append(mon);
         sb.append("-");
-        sb.append(Integer.toHexString(0xFF & bytes[2]));
+        String day=Integer.toHexString(0xFF & bytes[2]);
+        if(day.length()==1){
+            sb.append("0");
+        }
+        sb.append(day);
         sb.append(" ");
-        sb.append(Integer.toHexString(0xFF & bytes[3]));
+        String hour=Integer.toHexString(0xFF & bytes[3]);
+        if(hour.length()==1){
+            sb.append("0");
+        }
+        sb.append(hour);
         sb.append(":");
-        sb.append(Integer.toHexString(0xFF & bytes[4]));
+        String min=Integer.toHexString(0xFF & bytes[4]);
+        if(min.length()==1){
+            sb.append("0");
+        }
+        sb.append(min);
         sb.append(":00");
         return sb.toString();
     }
@@ -83,7 +99,7 @@ public class HEXUtil {
                 frianArray[i]=new BigDecimal(-1);
                 sign++;
             }else{
-                frianArray[i]=new BigDecimal(Integer.parseInt(frainstr)/10);
+                frianArray[i]=new BigDecimal(((double)Integer.parseInt(frainstr,16))/10).setScale(1,BigDecimal.ROUND_HALF_UP);
             }
         }
         if(sign==12){
@@ -102,21 +118,24 @@ public class HEXUtil {
         int sign=0;
         BigDecimal[] frsvrArray=new BigDecimal[12];
         for(int i=0;i<bytes.length;i+=2){
-            int j;
-            if(i==0){
-                j=0;
-            }else{
-                j=i-1;
-            }
+            int j=i/2;
             StringBuilder sb = new StringBuilder();
-            sb.append(Integer.toHexString(0xFF & bytes[i]));
-            sb.append(Integer.toHexString(0xFF & bytes[i+1]));
+            String num1=Integer.toHexString(0xFF & bytes[i]);
+            if(num1.length()==1){
+                sb.append("0");
+            }
+            sb.append(num1);
+            String num2=Integer.toHexString(0xFF & bytes[i+1]);
+            if(num2.length()==1){
+                sb.append("0");
+            }
+            sb.append(num2);
             String frsvr=sb.toString();
             if(frsvr.toUpperCase().equals("FFFF")){
                 frsvrArray[j]=new BigDecimal(-1);
                 sign++;
             }else{
-                frsvrArray[j]=new BigDecimal(Integer.parseInt(frsvr)/100);
+                frsvrArray[j]=new BigDecimal(((double)(Integer.parseInt(frsvr,16)))/100).setScale(2,BigDecimal.ROUND_HALF_UP);
             }
         }
         if(sign==12){
@@ -141,7 +160,7 @@ public class HEXUtil {
             if(mpcd.equals("00000000")){
                 sign++;
             }
-            int j=i==0?0:i-4;
+            int j=i/4;
             mpcdArray[j]=mpcd;
         }
         if(sign==bytes.length/4){
@@ -162,8 +181,8 @@ public class HEXUtil {
             byte[] valbyte=new byte[4];
             System.arraycopy(bytes, i, valbyte, 0, 4);
             String valstr=bytesToHexString(valbyte,false);
-            BigDecimal val=new BigDecimal(Double.parseDouble(valstr)/1000);
-            int j=i==0?0:i-4;
+            BigDecimal val=new BigDecimal(Double.parseDouble(valstr)/1000).setScale(3,BigDecimal.ROUND_HALF_UP);
+            int j=i/4;
             valArray[j]=val;
         }
         return valArray;
@@ -183,11 +202,11 @@ public class HEXUtil {
             String sign=Integer.toHexString(0xFF & bytes[i]).toUpperCase();
             BigDecimal val;
             if(sign.equals("FF")){
-                val=new BigDecimal((Double.parseDouble(valstr)/100)*-1);
+                val=new BigDecimal((Double.parseDouble(valstr)/100)*-1).setScale(2,BigDecimal.ROUND_HALF_UP);
             }else{
-                val=new BigDecimal(Double.parseDouble(valstr)/100);
+                val=new BigDecimal(Double.parseDouble(valstr)/100).setScale(2,BigDecimal.ROUND_HALF_UP);
             }
-            int j=i==0?0:i-5;
+            int j=i/5;
             valarray[j]=val;
         }
         return valarray;
@@ -205,8 +224,8 @@ public class HEXUtil {
             byte[] valbyte=new byte[count];
             System.arraycopy(bytes,i,valbyte,0,count);
             String valstr=bytesToHexString(valbyte,false);
-            BigDecimal val=new BigDecimal(Double.parseDouble(valstr)/1000000);
-            int j=i==0?0:count;
+            BigDecimal val=new BigDecimal(Double.parseDouble(valstr)/1000000).setScale(6,BigDecimal.ROUND_HALF_UP);
+            int j=i/count;
             valarray[j]=val;
         }
         return valarray;
