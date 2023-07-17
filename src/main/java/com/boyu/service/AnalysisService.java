@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -35,16 +36,19 @@ public class AnalysisService {
                 realrain.setIntv(new BigDecimal(1.0));
                 realrain.setPdr(new BigDecimal(1.0));
                 realrain.setJssign("0");
+                //当前今日雨量减去当前小时的雨量
+                BigDecimal daybeforehour=realrain.getDyp().subtract(realrain.getDrp());
                 List<StPptnR> hislist=new ArrayList<StPptnR>();
                 for (int i=0;i<frain.length;i++){
                     if(frain[i].intValue()==-1){
                         continue;
                     }
+                    daybeforehour=daybeforehour.add(frain[i]);
                     StPptnR hisrain=new StPptnR();
                     hisrain.setStcd(stcd);
                     hisrain.setTm(new Date(tm.getTime()-(60-(i+1)*5)*60*1000));
                     hisrain.setDrp(frain[i].setScale(1,BigDecimal.ROUND_HALF_UP));
-                    hisrain.setDyp(realrain.getDyp().setScale(1,BigDecimal.ROUND_HALF_UP));
+                    hisrain.setDyp(daybeforehour);
                     hislist.add(hisrain);
                 }
                 waterARainDao.insertHourRain(realrain,hislist,null);
@@ -68,6 +72,8 @@ public class AnalysisService {
                 realrain.setPdr(pdr);
                 realrain.setJssign("0");
                 String[] jbje=lastrain.getJssign().substring(1).split("");
+                //当前今日雨量减去当前小时的雨量
+                BigDecimal daybeforehour=realrain.getDyp().subtract(realrain.getDrp());
                 //新增的5分钟雨量
                 List<Integer> insertlist=new ArrayList<Integer>();
                 //修改的5分钟雨量
@@ -102,11 +108,15 @@ public class AnalysisService {
                     if(frain[inteval].intValue()==-1){
                         continue;
                     }
+                    BigDecimal dyp=new BigDecimal(daybeforehour.floatValue()).setScale(1,BigDecimal.ROUND_HALF_UP);
+                    for(int h=0;h<inteval+1;h++){
+                        dyp=dyp.add(frain[h]);
+                    }
                     StPptnR hisrain=new StPptnR();
                     hisrain.setStcd(stcd);
                     hisrain.setTm(new Date(tm.getTime()-(60-(inteval+1)*5)*60*1000));
                     hisrain.setDrp(frain[inteval]);
-                    hisrain.setDyp(realrain.getDyp());
+                    hisrain.setDyp(dyp);
                     hislist.add(hisrain);
                 }
                 List<StPptnR> uplist=new ArrayList<StPptnR>();
@@ -115,18 +125,51 @@ public class AnalysisService {
                     if(frain[inteval].intValue()==-1){
                         continue;
                     }
+                    BigDecimal dyp=new BigDecimal(daybeforehour.floatValue()).setScale(1,BigDecimal.ROUND_HALF_UP);
+                    for(int h=0;h<inteval+1;h++){
+                        dyp=dyp.add(frain[h]);
+                    }
                     StPptnR hisrain=new StPptnR();
                     hisrain.setStcd(stcd);
                     hisrain.setTm(new Date(tm.getTime()-(60-(inteval+1)*5)*60*1000));
                     hisrain.setDrp(frain[inteval]);
-                    hisrain.setDyp(realrain.getDyp());
+                    hisrain.setDyp(dyp);
                     uplist.add(hisrain);
                 }
                 waterARainDao.insertHourRain(realrain,hislist,uplist);
             }
     }
     //加时报雨情信息分析
-
+    public void rainAddAnalysis(String stcd,Date tm,BigDecimal train,BigDecimal drain){
+        StPptnR lastrain=waterARainDao.getRealRain(stcd);
+        long during=tm.getTime()-lastrain.getTm().getTime();
+        //加报观测时间是否和小时报上报时间一致 如果一致，不需要解析
+        if(during>0){
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(tm);
+            int min=cal.get(Calendar.MINUTE);
+            String jssign=getJssign(min);
+            long minutes=(tm.getTime()-lastrain.getTm().getTime())/(60*1000);
+            BigDecimal intv=new BigDecimal(((double)minutes)/60).setScale(2,BigDecimal.ROUND_HALF_UP);
+            BigDecimal pdr;
+            if(intv.doubleValue()>=1){
+                long hour=minutes/60;
+                pdr=new BigDecimal(hour+((double)(minutes-hour*60))/100).setScale(2,BigDecimal.ROUND_HALF_UP);
+            }else{
+                pdr=new BigDecimal(((double)minutes)/100).setScale(2,BigDecimal.ROUND_HALF_UP);
+            }
+            StPptnR realrain=new StPptnR();
+            realrain.setStcd(stcd);
+            realrain.setTm(tm);
+            realrain.setDrp(train.subtract(lastrain.getTotal()).setScale(1,BigDecimal.ROUND_HALF_UP));
+            realrain.setDyp(drain.setScale(1,BigDecimal.ROUND_HALF_UP));
+            realrain.setTotal(train.setScale(1,BigDecimal.ROUND_HALF_UP));
+            realrain.setIntv(intv);
+            realrain.setPdr(pdr);
+            realrain.setJssign(jssign);
+            waterARainDao.insertAddRain(realrain);
+        }
+    }
 
     //小时报水情信息分析
     public void wateranalysis(String stcd,Date nowtm,BigDecimal[] frsvr){
@@ -152,6 +195,7 @@ public class AnalysisService {
             int hour=Integer.parseInt(timestr.substring(0,2));
             Date date=new SimpleDateFormat("yyyy-MM-dd").parse(ltmstr);
             WaterParam param=waterARainDao.getWaterParam(stcd,date,hour,year,mon);
+            //1小时内没有加时报
             if(param.getJssign().length()==1 && param.getJssign().equals("0")){
                 BigDecimal minrz=new BigDecimal(0),maxrz=new BigDecimal(0),sumrz=new BigDecimal(0);
                 Date mindate=new Date(nowtm.getTime()-(60-(0+1)*5)*60*1000),maxdate=new Date(nowtm.getTime()-(60-(0+1)*5)*60*1000);
@@ -415,8 +459,98 @@ public class AnalysisService {
 
             }
         } catch (ParseException e) {
-            logger.error(stcd+":采集日期转换错误",e);
+            logger.error(stcd+":小时报采集日期转换错误",e);
         }
+    }
+
+    /**
+     * 加报水情分析
+     * @param stcd
+     * @param nowtm
+     * @param rz
+     */
+    public void wateranalysisAdd(String stcd,Date nowtm,BigDecimal rz){
+        //实时水情采集
+        StRsvrR realwater=new StRsvrR();
+        //历史水情采集
+        List<StRsvrR> hislist=new ArrayList<StRsvrR>();
+        //小时水情采集
+        StRsvrR hourwater=new StRsvrR();
+        //日水情采集
+        StRsvrR daywater=new StRsvrR();
+        //月水情采集
+        StRsvrR monwater=new StRsvrR();
+        //站点预警信息采集
+        StAlarmInfo alarminfo=new StAlarmInfo();
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(nowtm);
+        int min=cal.get(Calendar.MINUTE);
+        String jssign= getJssign(min);
+        Date ltm=new Date(nowtm.getTime());
+        if(jssign.equals("C")){
+            ltm=new Date(nowtm.getTime()-1*60*60*1000);
+        }
+        String ltmstr=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(ltm);
+        String datestr=ltmstr.split(" ")[0];
+        String timestr=ltmstr.split(" ")[1];
+        int year=Integer.parseInt(datestr.substring(0,4));
+        int mon=Integer.parseInt(datestr.substring(5,7));
+        int hour=Integer.parseInt(timestr.substring(0,2));
+        try {
+          Date  date = new SimpleDateFormat("yyyy-MM-dd").parse(ltmstr);
+            WaterParam param=waterARainDao.getWaterParam(stcd,date,hour,year,mon);
+            //判断加报观测时间是否和当前实时信息表中的数据是否一致，一致，不需要进行操作 不一致 进行插入操作
+            if(!param.getLastdate().equals(nowtm)){
+
+            }
+        } catch (ParseException e) {
+            logger.error(stcd+":加报采集日期转换错误",e);
+        }
+
+
+    }
+
+    private String getJssign(int min) {
+        String jssign="";
+        switch (min) {
+            case 5:
+                jssign = "1";
+                break;
+            case 10:
+                jssign = "2";
+                break;
+            case 15:
+                jssign = "3";
+                break;
+            case 20:
+                jssign = "4";
+                break;
+            case 25:
+                jssign = "5";
+                break;
+            case 30:
+                jssign = "6";
+                break;
+            case 35:
+                jssign = "7";
+                break;
+            case 40:
+                jssign = "8";
+                break;
+            case 45:
+                jssign = "9";
+                break;
+            case 50:
+                jssign = "A";
+                break;
+            case 55:
+                jssign = "B";
+                break;
+            case 0:
+                jssign = "C";
+                break;
+        }
+        return jssign;
     }
 
     /**

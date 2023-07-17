@@ -72,7 +72,7 @@ public class WaterARainDao {
     }
 
     /**
-     * 插入小时报(加报)雨量采集数据
+     * 插入小时报雨量采集数据
      */
     public void insertHourRain(StPptnR realinfo, List<StPptnR>hisinfo,List<StPptnR> upinfo){
         Connection conn = DruidUtils.getConnection();
@@ -144,7 +144,39 @@ public class WaterARainDao {
             logger.error(realinfo.getStcd()+":小时报实时雨量采集失败！",e);
         }
     }
-
+    /**
+     * 插入加报雨量采集数据
+     */
+    public void insertAddRain(StPptnR realinfo){
+        Connection conn = DruidUtils.getConnection();
+        PreparedStatement pstm;
+        try {
+            conn.setAutoCommit(false);
+            String sql_real = "update ST_PPTN_R1 set TM=?,DRP=?,PDR=?,DYP=?,TOTAL=?,INTV=?,JSSIGN=JSSIGN+? where STCD=?";
+            pstm = conn.prepareStatement(sql_real);
+            pstm.setTimestamp(1, new java.sql.Timestamp(realinfo.getTm().getTime()));
+            pstm.setBigDecimal(2, realinfo.getDrp());
+            pstm.setBigDecimal(3, realinfo.getPdr());
+            pstm.setBigDecimal(4, realinfo.getDyp());
+            pstm.setBigDecimal(5, realinfo.getTotal());
+            pstm.setBigDecimal(6, realinfo.getIntv());
+            pstm.setString(7, realinfo.getJssign());
+            pstm.setString(8, realinfo.getStcd());
+            pstm.executeUpdate();
+            String sql_his="insert into ST_PPTN_R(STCD,TM,DRP,DYP)values(?,?,?,?)";
+            pstm=conn.prepareStatement(sql_his);
+            pstm.setString(1,realinfo.getStcd());
+            pstm.setTimestamp(2,new java.sql.Timestamp(realinfo.getTm().getTime()));
+            pstm.setBigDecimal(3,realinfo.getDrp());
+            pstm.setBigDecimal(4,realinfo.getDyp());
+            pstm.executeUpdate();
+            conn.commit();
+            conn.setAutoCommit(true);
+            DruidUtils.closeAll(conn,pstm,null);
+        } catch (SQLException e) {
+            logger.error(realinfo.getStcd()+":加报实时雨量采集失败！",e);
+        }
+    }
     /**
      * 水位采集前，获取的必须参数
      * @param stcd

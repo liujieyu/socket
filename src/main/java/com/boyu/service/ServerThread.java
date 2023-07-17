@@ -65,11 +65,13 @@ public class ServerThread implements Runnable {
                    byte codesign=request[10];
                    resMessage(request, codesign);
                    switch (codesign){
-                       case 52:analysis34H(request);//小时报
+                       case 52:analysis34H(request);  //小时报
                            break;
-                       case 51:                     //加报
+                       case 51:analysis33H(request);  //加报
                            break;
                    }
+                   //每隔1秒执行一次
+                   Thread.sleep(1000*1);
                }
            }
         } catch (IOException e) {
@@ -84,6 +86,8 @@ public class ServerThread implements Runnable {
                 logger.error(STCD+"监测站点通信关闭异常！",e);
             }
             logger.error(STCD+"监测站点信号异常！",e);
+        } catch (InterruptedException e) {
+            logger.error(STCD+"线程睡眠异常！",e);
         }
     }
     //发送下行报文
@@ -259,9 +263,65 @@ public class ServerThread implements Runnable {
             //运行工况数据采集
             safeservice.statusanalysis(stcd,tmdate,mcnel,scnel,vol);
         } catch (ParseException e) {
-            logger.error(stcd+":采集日期转换错误",e);
+            logger.error(stcd+":小时报采集日期转换错误",e);
         }
         logger.info(stcd+":小时报监测数据采集入库！");
     }
     //加报解析33H
+    private void analysis33H(byte[] request){
+        //观测时间
+        byte[] tmbyte=new byte[5];
+        System.arraycopy(request, 32, tmbyte, 0, 5);
+        String tm=HEXUtil.bytesToDatetime(tmbyte);
+        //获取加报标识 (雨量、水位、大坝)
+        byte[] signbyte=new byte[2];
+        System.arraycopy(request, 37, tmbyte, 0, 2);
+        String sign=HEXUtil.bytesToHexString(signbyte,true);
+        byte[] dambyte=new byte[3];
+        System.arraycopy(request, 37, tmbyte, 0, 3);
+        String signdam=HEXUtil.bytesToHexString(dambyte,true);
+        if(sign.equals("2619")){
+            analysisRain33(tm,request);
+        }else if(sign.equals("391A")){
+            analysisWater33(tm,request);
+        }else if(signdam.equals("FF11C0")){
+            analysisDam33(tm,request);
+        }
+
+    }
+    //大坝安全加报
+    private void analysisDam33(String tm,byte[] request){
+
+    }
+    //雨量加报
+    private void analysisRain33(String tm,byte[] request){
+        //累计降雨量
+        byte[] trainbyte=new byte[3];
+        System.arraycopy(request, 39, trainbyte, 0, 3);
+        String trainstr=HEXUtil.bytesToHexString(trainbyte,false);
+        BigDecimal train=new BigDecimal(((double)Integer.parseInt(trainstr))/10).setScale(1,BigDecimal.ROUND_HALF_UP);
+        //今日降雨量
+        byte[] drainbyte=new byte[3];
+        System.arraycopy(request, 44, drainbyte, 0, 3);
+        String drainstr=HEXUtil.bytesToHexString(drainbyte,false);
+        BigDecimal drain=new BigDecimal(((double)Integer.parseInt(drainstr))/10).setScale(1,BigDecimal.ROUND_HALF_UP);
+        //电压
+        byte[] volbyte=new byte[2];
+        System.arraycopy(request,49,volbyte,0,2);
+        String volstr=HEXUtil.bytesToHexString(volbyte,false);
+        BigDecimal vol=new BigDecimal(Double.parseDouble(volstr)/100).setScale(2,BigDecimal.ROUND_HALF_UP);
+        try {
+            Date tmdate=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(tm);
+            //雨量加报采集
+            service.rainAddAnalysis(STCD,tmdate,train,drain);
+            //运行工况数据加报采集
+            safeservice.statusanalysisAdd(STCD,tmdate,vol);
+        } catch (ParseException e) {
+            logger.error(STCD+":雨量加报采集日期转换错误",e);
+        }
+    }
+    //水位加报
+    private void analysisWater33(String tm,byte[] request){
+
+    }
 }

@@ -218,7 +218,7 @@ public class DamSafeDao {
             logger.error(stcd+"表面变形位移数据采集失败！",e);
         }
     }
-    //运行工况数据采集
+    //运行工况数据采集(小时报)
     public void insertStatusInfo(StStationStatus status){
         Connection conn = DruidUtils.getConnection();
         PreparedStatement pstm;
@@ -250,7 +250,38 @@ public class DamSafeDao {
             conn.setAutoCommit(true);
             DruidUtils.closeAll(conn,pstm,null);
         } catch (SQLException e) {
-            logger.error(status.getStcd()+"运行工况数据采集失败！",e);
+            logger.error(status.getStcd()+"运行工况数据小时报采集失败！",e);
+        }
+    }
+    //运行工况数据采集(加报)
+    public void insertStatusInfoByAdd(StStationStatus status){
+        Connection conn = DruidUtils.getConnection();
+        PreparedStatement pstm;
+        try {
+            conn.setAutoCommit(false);
+            String sql_real="update ST_StationStatus_R set TM=?,VOLTYPE=?,VOL=?,CS=?,RFT=? where STCD=?";
+            pstm=conn.prepareStatement(sql_real);
+            pstm.setTimestamp(1,new java.sql.Timestamp(status.getTm().getTime()));
+            pstm.setInt(2,status.getVoltype());
+            pstm.setBigDecimal(3,status.getVol());
+            pstm.setInt(4,status.getCs());
+            pstm.setInt(5,status.getRft());
+            pstm.setString(6,status.getStcd());
+            pstm.executeUpdate();
+            String sql_his="insert into ST_StationStatus_H(STCD,TM,VOLTP,VOL,CS,RFT,MMCSQ,MSCSQ) select STCD,?,?,?,?,?,MMCSQ,MSCSQ from ST_StationStatus_R where STCD=?";
+            pstm=conn.prepareStatement(sql_his);
+            pstm.setTimestamp(1,new java.sql.Timestamp(status.getTm().getTime()));
+            pstm.setInt(2,1);
+            pstm.setBigDecimal(3,status.getVol());
+            pstm.setInt(4,status.getCs());
+            pstm.setInt(5,status.getRft());
+            pstm.setString(6,status.getStcd());
+            pstm.executeUpdate();
+            conn.commit();
+            conn.setAutoCommit(true);
+            DruidUtils.closeAll(conn,pstm,null);
+        } catch (SQLException e) {
+            logger.error(status.getStcd()+"运行工况数据加报采集失败！",e);
         }
     }
 }

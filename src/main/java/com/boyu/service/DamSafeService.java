@@ -77,7 +77,7 @@ public class DamSafeService {
         }
         damSafeDao.insertSrhvrdsInfo(stcd,listhrds);
     }
-    //运行工况监测数据分析
+    //运行工况监测数据分析（小时报）
     public void statusanalysis(String stcd,Date tm,String mcnel,String scnel,BigDecimal vol){
         StStationStatus status=new StStationStatus();
         status.setStcd(stcd);
@@ -89,6 +89,17 @@ public class DamSafeService {
         status.setMmcsq(mcnel);
         status.setMscsq(scnel);
         damSafeDao.insertStatusInfo(status);
+    }
+    //运行工况监测数据分析（加报）
+    public void statusanalysisAdd(String stcd,Date tm,BigDecimal vol){
+        StStationStatus status=new StStationStatus();
+        status.setStcd(stcd);
+        status.setTm(tm);
+        status.setVoltype(1);
+        status.setRft(1);
+        status.setVol(vol);
+        status.setCs(1);
+        damSafeDao.insertStatusInfoByAdd(status);
     }
     //监测站点通讯中断
     public void statuscomloss(String stcd,Date tm){
