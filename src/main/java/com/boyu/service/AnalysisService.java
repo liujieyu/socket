@@ -501,7 +501,10 @@ public class AnalysisService {
             WaterParam param=waterARainDao.getWaterParam(stcd,date,hour,year,mon);
             //判断加报观测时间是否和当前实时信息表中的数据是否一致，一致，不需要进行操作 不一致 进行插入操作
             if(!param.getLastdate().equals(nowtm)){
-
+                StRsvrR hiswater=new StRsvrR();
+                hiswater.setStcd(stcd);
+                hiswater.setTm(nowtm);
+                hiswater.setRz(rz);
             }
         } catch (ParseException e) {
             logger.error(stcd+":加报采集日期转换错误",e);
