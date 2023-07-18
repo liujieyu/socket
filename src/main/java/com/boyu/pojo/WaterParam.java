@@ -16,10 +16,16 @@ public class WaterParam {
     private BigDecimal xhwl;   //校核水位
     private BigDecimal hmaxwl; //小时最高水位
     private BigDecimal hminwl; //小时最低水位
+    private BigDecimal hrz;    //小时平均水位
+    private int hmemo;         //小时水位操作次数
     private BigDecimal dmaxwl; //日最高水位
     private BigDecimal dminwl; //日最低水位
+    private BigDecimal drz;    //日平均水位
+    private int dmemo;         //日水位操作次数
     private BigDecimal mmaxwl; //月最高水位
     private BigDecimal mminwl; //月最低水位
+    private BigDecimal mrz;    //月平均水位
+    private int mmemo;         //月水位操作次数
     private Integer alarm;     //预警等级
 
     public String getJssign() {
@@ -132,5 +138,53 @@ public class WaterParam {
 
     public void setAlarm(Integer alarm) {
         this.alarm = alarm;
+    }
+
+    public BigDecimal getHrz() {
+        return hrz;
+    }
+
+    public void setHrz(BigDecimal hrz) {
+        this.hrz = hrz;
+    }
+
+    public int getHmemo() {
+        return hmemo;
+    }
+
+    public void setHmemo(int hmemo) {
+        this.hmemo = hmemo;
+    }
+
+    public BigDecimal getDrz() {
+        return drz;
+    }
+
+    public void setDrz(BigDecimal drz) {
+        this.drz = drz;
+    }
+
+    public int getDmemo() {
+        return dmemo;
+    }
+
+    public void setDmemo(int dmemo) {
+        this.dmemo = dmemo;
+    }
+
+    public BigDecimal getMrz() {
+        return mrz;
+    }
+
+    public void setMrz(BigDecimal mrz) {
+        this.mrz = mrz;
+    }
+
+    public int getMmemo() {
+        return mmemo;
+    }
+
+    public void setMmemo(int mmemo) {
+        this.mmemo = mmemo;
     }
 }

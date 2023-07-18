@@ -22,6 +22,7 @@ public class StRsvrR {
     private int addsign;       //insert(0) or update(1)
     private String jssign;     //加时报  时间间隔
     private int alarm;         //实时水位预警等级
+    private String memo;       //操作水位次数 用于求平均水位
 
     public Integer getId() {
         return id;
@@ -165,5 +166,13 @@ public class StRsvrR {
 
     public void setAlarm(int alarm) {
         this.alarm = alarm;
+    }
+
+    public String getMemo() {
+        return memo;
+    }
+
+    public void setMemo(String memo) {
+        this.memo = memo;
     }
 }

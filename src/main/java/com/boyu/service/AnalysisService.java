@@ -264,10 +264,12 @@ public class AnalysisService {
                 hourwater.setDate(date);
                 hourwater.setHour(hour);
                 hourwater.setStcd(stcd);
+                hourwater.setMemo(String.valueOf(frsvr.length));
                 //日水位采集
                 daywater.setDate(date);
                 daywater.setStcd(stcd);
-                daywater.setRz(avgrz);
+                daywater.setRz(new BigDecimal((param.getDrz().doubleValue()*param.getDmemo()+sumrz.doubleValue())/(param.getDmemo()+frsvr.length)).setScale(3,BigDecimal.ROUND_HALF_UP));
+                daywater.setMemo(String.valueOf((param.getDmemo()+frsvr.length)));
                 if(param.getDmaxwl()==null){
                     daywater.setAddsign(0);
                     daywater.setMaxrz(maxrz);
@@ -289,7 +291,8 @@ public class AnalysisService {
                 monwater.setYear(year);
                 monwater.setMon(mon);
                 monwater.setStcd(stcd);
-                monwater.setRz(avgrz);
+                monwater.setRz(new BigDecimal((param.getMrz().doubleValue()*param.getMmemo()+sumrz.doubleValue())/(param.getMmemo()+frsvr.length)).setScale(3,BigDecimal.ROUND_HALF_UP));
+                monwater.setMemo(String.valueOf((param.getDmemo()+frsvr.length)));
                 if(param.getMmaxwl()==null){
                     monwater.setAddsign(0);
                     monwater.setMaxrz(maxrz);
@@ -388,7 +391,8 @@ public class AnalysisService {
                     BigDecimal avgrz=sumrz.divide(new BigDecimal(insertlist.size())).setScale(3,BigDecimal.ROUND_HALF_UP);
                     //小时水位采集
                     hourwater.setAddsign(1);
-                    hourwater.setRz(avgrz);
+                    hourwater.setRz(new BigDecimal((param.getHrz().doubleValue()*param.getHmemo()+sumrz.doubleValue())/(param.getHmemo()+insertlist.size())).setScale(3,BigDecimal.ROUND_HALF_UP));
+                    hourwater.setMemo(String.valueOf((param.getHmemo()+insertlist.size())));
                     if(param.getHminwl().doubleValue()>minrz.doubleValue()){
                         hourwater.setMinrz(minrz);
                         hourwater.setMindate(mindate);
@@ -399,8 +403,13 @@ public class AnalysisService {
                     //日水位采集
                     daywater.setDate(date);
                     daywater.setStcd(stcd);
-                    daywater.setRz(avgrz);
+                    daywater.setRz(new BigDecimal((param.getDrz().doubleValue()*param.getDmemo()+sumrz.doubleValue())/(param.getDmemo()+insertlist.size())).setScale(3,BigDecimal.ROUND_HALF_UP));
+                    daywater.setMemo(String.valueOf((param.getDmemo()+insertlist.size())));
                     daywater.setAddsign(1);
+                    if(param.getDmaxwl().doubleValue()<maxrz.doubleValue()){
+                        daywater.setMaxrz(maxrz);
+                        daywater.setMaxdate(maxdate);
+                    }
                     if(param.getDminwl().doubleValue()>minrz.doubleValue()){
                         daywater.setMinrz(minrz);
                         daywater.setMindate(mindate);
@@ -409,8 +418,13 @@ public class AnalysisService {
                     monwater.setYear(year);
                     monwater.setMon(mon);
                     monwater.setStcd(stcd);
-                    monwater.setRz(avgrz);
+                    monwater.setRz(new BigDecimal((param.getMrz().doubleValue()*param.getMmemo()+sumrz.doubleValue())/(param.getMmemo()+insertlist.size())).setScale(3,BigDecimal.ROUND_HALF_UP));
+                    monwater.setMemo(String.valueOf((param.getMmemo()+insertlist.size())));
                     monwater.setAddsign(1);
+                    if(param.getMmaxwl().doubleValue()<maxrz.doubleValue()){
+                        monwater.setMaxrz(maxrz);
+                        monwater.setMaxdate(maxdate);
+                    }
                     if(param.getMminwl().doubleValue()>minrz.doubleValue()){
                         monwater.setMinrz(minrz);
                         monwater.setMindate(mindate);
@@ -501,10 +515,163 @@ public class AnalysisService {
             WaterParam param=waterARainDao.getWaterParam(stcd,date,hour,year,mon);
             //判断加报观测时间是否和当前实时信息表中的数据是否一致，一致，不需要进行操作 不一致 进行插入操作
             if(!param.getLastdate().equals(nowtm)){
+                //历史水位采集
                 StRsvrR hiswater=new StRsvrR();
                 hiswater.setStcd(stcd);
                 hiswater.setTm(nowtm);
                 hiswater.setRz(rz);
+                BigDecimal cv=rz.subtract(param.getLastrz()).setScale(3,BigDecimal.ROUND_HALF_UP);
+                hiswater.setCv(cv);
+                if(cv.doubleValue()==0){
+                    hiswater.setRwptn("6");
+                }else if(cv.doubleValue()>0){
+                    hiswater.setRwptn("5");
+                }else{
+                    hiswater.setRwptn("4");
+                }
+                hislist.add(hiswater);
+                //实时水位采集
+                realwater=hiswater;
+                BigDecimal xxwater;
+                if (mon >= 7 && mon <= 9) {
+                    xxwater = param.getFwl79();
+                } else {
+                    xxwater = param.getFwl();
+                }
+                int alarm = setRealAlarm(realwater, xxwater, param);
+                realwater.setAlarm(alarm);
+                realwater.setJssign(param.getJssign()+jssign);
+                //小时水位采集
+                hourwater.setRz(new BigDecimal((param.getHrz().doubleValue()*param.getHmemo()+rz.doubleValue())/param.getHmemo()+1));
+                hourwater.setDate(date);
+                hourwater.setHour(hour);
+                hourwater.setStcd(stcd);
+                hourwater.setMemo(String.valueOf(param.getHmemo()+1));
+                if(param.getHmaxwl()==null){
+                    hourwater.setAddsign(0);
+                    hourwater.setMaxrz(rz);
+                    hourwater.setMinrz(rz);
+                    if(jssign.equals("C")){
+                        hourwater.setMaxdate(new Date(nowtm.getTime()-1000));
+                        hourwater.setMindate(new Date(nowtm.getTime()-1000));
+                    }else{
+                        hourwater.setMaxdate(nowtm);
+                        hourwater.setMindate(nowtm);
+                    }
+                }else{
+                    hourwater.setAddsign(1);
+                    if(rz.compareTo(param.getHmaxwl())==1){
+                        hourwater.setMaxrz(rz);
+                        if(jssign.equals("C")){
+                            hourwater.setMaxdate(new Date(nowtm.getTime()-1000));
+                        }else{
+                            hourwater.setMaxdate(nowtm);
+                        }
+                    }
+                    if(rz.compareTo(param.getHminwl())==-1){
+                        hourwater.setMinrz(rz);
+                        if(jssign.equals("C")){
+                            hourwater.setMindate(new Date(nowtm.getTime()-1000));
+                        }else{
+                            hourwater.setMindate(nowtm);
+                        }
+                    }
+                }
+                //日水位采集
+                daywater.setDate(date);
+                daywater.setStcd(stcd);
+                daywater.setRz(new BigDecimal((param.getDrz().doubleValue()*param.getDmemo()+rz.doubleValue())/(param.getDmemo()+1)).setScale(3,BigDecimal.ROUND_HALF_UP));
+                daywater.setMemo(String.valueOf((param.getDmemo()+1)));
+                if(param.getDmaxwl()==null){
+                    daywater.setAddsign(0);
+                    daywater.setMaxrz(rz);
+                    daywater.setMinrz(rz);
+                    if(jssign.equals("C")){
+                        daywater.setMindate(new Date(nowtm.getTime()-1000));
+                        daywater.setMaxdate(new Date(nowtm.getTime()-1000));
+                    }else{
+                        daywater.setMindate(nowtm);
+                        daywater.setMaxdate(nowtm);
+                    }
+                }else{
+                    daywater.setAddsign(1);
+                    if(param.getDmaxwl().doubleValue()<rz.doubleValue()){
+                        daywater.setMaxrz(rz);
+                        if(jssign.equals("C")){
+                            daywater.setMaxdate(new Date(nowtm.getTime()-1000));
+                        }else{
+                            daywater.setMaxdate(nowtm);
+                        }
+
+                    }
+                    if(param.getDminwl().doubleValue()>rz.doubleValue()){
+                        daywater.setMinrz(rz);
+                        if(jssign.equals("C")){
+                            daywater.setMindate(new Date(nowtm.getTime()-1000));
+                        }else{
+                            daywater.setMindate(nowtm);
+                        }
+                    }
+                }
+                //月水位采集
+                monwater.setYear(year);
+                monwater.setMon(mon);
+                monwater.setStcd(stcd);
+                monwater.setRz(new BigDecimal((param.getMrz().doubleValue()*param.getMmemo()+rz.doubleValue())/(param.getMmemo()+1)).setScale(3,BigDecimal.ROUND_HALF_UP));
+                monwater.setMemo(String.valueOf((param.getDmemo()+1)));
+                if(param.getMmaxwl()==null){
+                    monwater.setAddsign(0);
+                    monwater.setMaxrz(rz);
+                    monwater.setMinrz(rz);
+                    if(jssign.equals("C")){
+                        monwater.setMindate(new Date(nowtm.getTime()-1000));
+                        monwater.setMaxdate(new Date(nowtm.getTime()-1000));
+                    }else{
+                        monwater.setMindate(nowtm);
+                        monwater.setMaxdate(nowtm);
+                    }
+                }else{
+                    monwater.setAddsign(1);
+                    if(param.getMmaxwl().doubleValue()<rz.doubleValue()){
+                        monwater.setMaxrz(rz);
+                        if(jssign.equals("C")){
+                            monwater.setMaxdate(new Date(nowtm.getTime()-1000));
+                        }else{
+                            monwater.setMaxdate(nowtm);
+                        }
+
+                    }
+                    if(param.getMminwl().doubleValue()>rz.doubleValue()){
+                        monwater.setMinrz(rz);
+                        if(jssign.equals("C")){
+                            monwater.setMindate(new Date(nowtm.getTime()-1000));
+                        }else{
+                            monwater.setMindate(nowtm);
+                        }
+                    }
+                }
+                //站点预警信息
+                if(param.getAlarm()>alarm){
+                    alarminfo.setStcd(stcd);
+                    alarminfo.setSttp("RR");
+                    alarminfo.setAlarm(alarm);
+                    alarminfo.setTm(realwater.getTm());
+                    switch (alarm){
+                        case 1:alarminfo.setMv(realwater.getRz().subtract(param.getXhwl()));
+                            alarminfo.setContent("超校核水位"+alarminfo.getMv()+"m");
+                            alarminfo.setAlarmv(param.getXhwl());
+                            break;
+                        case 2:alarminfo.setMv(realwater.getRz().subtract(param.getZcwl()));
+                            alarminfo.setContent("超正常蓄水位"+alarminfo.getMv()+"m");
+                            alarminfo.setAlarmv(param.getZcwl());
+                            break;
+                        case 3:alarminfo.setMv(realwater.getRz().subtract(xxwater));
+                            alarminfo.setContent("超汛限水位"+alarminfo.getMv()+"m");
+                            alarminfo.setAlarmv(xxwater);
+                            break;
+                    }
+                }
+                waterARainDao.insertHourWater(realwater,hislist,hourwater,daywater,monwater,alarminfo);
             }
         } catch (ParseException e) {
             logger.error(stcd+":加报采集日期转换错误",e);

@@ -207,9 +207,9 @@ public class WaterARainDao {
                 param.setLastdate(res.getDate(7));
                 param.setAlarm(res.getInt(8));
             }
-            String sql_tzrz="select 'h' as bsign,Max_RZ,Min_RZ from ST_RSVR_H where STCD=? and DT=? and TM=? " +
-                    "union all select 'd' as bsign,Max_RZ,Min_RZ from ST_RSVR_D where STCD=? and TM=? " +
-                    "union all select 'm' as bsign,Max_RZ,Min_RZ from ST_RSVR_M where STCD=? and YR=? and MON=?";
+            String sql_tzrz="select 'h' as bsign,Max_RZ,Min_RZ,RZ,MEMO from ST_RSVR_H where STCD=? and DT=? and TM=? " +
+                    "union all select 'd' as bsign,Max_RZ,Min_RZ,RZ,MEMO from ST_RSVR_D where STCD=? and TM=? " +
+                    "union all select 'm' as bsign,Max_RZ,Min_RZ,RZ,MEMO from ST_RSVR_M where STCD=? and YR=? and MON=?";
             pstm=conn.prepareStatement(sql_tzrz);
             pstm.setString(1,stcd);
             pstm.setDate(2,new java.sql.Date(date.getTime()));
@@ -224,12 +224,33 @@ public class WaterARainDao {
                 switch (res.getString(1).charAt(0)){
                     case 'h':param.setHmaxwl(res.getBigDecimal(2));
                              param.setHminwl(res.getBigDecimal(3));
+                             param.setHrz(res.getBigDecimal(4));
+                             String hmemo=res.getString(5);
+                             if(hmemo==null){
+                                 param.setHmemo(0);
+                             }else{
+                                 param.setHmemo(Integer.valueOf(hmemo));
+                             }
                              break;
                     case 'd':param.setDmaxwl(res.getBigDecimal(2));
                              param.setDminwl(res.getBigDecimal(3));
+                             param.setDrz(res.getBigDecimal(4));
+                             String dmemo=res.getString(5);
+                             if(dmemo==null){
+                                 param.setDmemo(0);
+                             }else{
+                                 param.setDmemo(Integer.valueOf(dmemo));
+                             }
                              break;
                     case 'm':param.setMmaxwl(res.getBigDecimal(2));
                              param.setMminwl(res.getBigDecimal(3));
+                             param.setMrz(res.getBigDecimal(4));
+                             String mmemo=res.getString(5);
+                             if(mmemo==null){
+                                 param.setMmemo(0);
+                             }else{
+                                 param.setMmemo(Integer.valueOf(mmemo));
+                             }
                              break;
                 }
             }
@@ -324,7 +345,7 @@ public class WaterARainDao {
             String sql_hwater="";
             //新增
             if(hourwater.getAddsign()==0){
-                sql_hwater="insert into ST_RSVR_H(STCD,DT,TM,RZ,CV,Max_RZ,Max_TM,Min_RZ,Min_TM,HW) values(?,?,?,?,?,?,?,?,?,dbo.FUNC_GETKR(?,?))";
+                sql_hwater="insert into ST_RSVR_H(STCD,DT,TM,RZ,CV,Max_RZ,Max_TM,Min_RZ,Min_TM,HW,MEMO) values(?,?,?,?,?,?,?,?,?,dbo.FUNC_GETKR(?,?),?)";
                 pstm=conn.prepareStatement(sql_hwater);
                 pstm.setString(1,hourwater.getStcd());
                 pstm.setDate(2,new java.sql.Date(hourwater.getDate().getTime()));
@@ -337,6 +358,7 @@ public class WaterARainDao {
                 pstm.setTimestamp(9,new java.sql.Timestamp(hourwater.getMindate().getTime()));
                 pstm.setBigDecimal(10,hourwater.getRz());
                 pstm.setString(11,hourwater.getStcd());
+                pstm.setString(12,hourwater.getMemo());
                 pstm.executeUpdate();
             }//修改
             else{
@@ -350,7 +372,7 @@ public class WaterARainDao {
                     sb_hwater.append(",Min_RZ=?,Min_TM=?");
                     minsign+=2;
                 }
-                sb_hwater.append(",HW=dbo.FUNC_GETKR(?,?) where STCD=? and DT=? and TM=?");
+                sb_hwater.append(",HW=dbo.FUNC_GETKR(?,?),MEMO=? where STCD=? and DT=? and TM=?");
                 sql_hwater=sb_hwater.toString();
                 pstm=conn.prepareStatement(sql_hwater);
                 pstm.setBigDecimal(1,hourwater.getRz());
@@ -365,16 +387,17 @@ public class WaterARainDao {
                 }
                 pstm.setBigDecimal(3+maxsign+minsign,hourwater.getRz());
                 pstm.setString(4+maxsign+minsign,hourwater.getStcd());
-                pstm.setString(5+maxsign+minsign,hourwater.getStcd());
-                pstm.setDate(6+maxsign+minsign,new java.sql.Date(hourwater.getDate().getTime()));
-                pstm.setInt(7+maxsign+minsign,hourwater.getHour());
+                pstm.setString(5+maxsign+minsign,hourwater.getMemo());
+                pstm.setString(6+maxsign+minsign,hourwater.getStcd());
+                pstm.setDate(7+maxsign+minsign,new java.sql.Date(hourwater.getDate().getTime()));
+                pstm.setInt(8+maxsign+minsign,hourwater.getHour());
                 pstm.executeUpdate();
             }
             //日水位表
             String sql_dwater="";
             //新增
             if(datewater.getAddsign()==0){
-                sql_dwater="insert into ST_RSVR_D(STCD,TM,RZ,Max_RZ,Max_TM,Min_RZ,Min_TM,DW) values(?,?,?,?,?,?,?,dbo.FUNC_GETKR(?,?))";
+                sql_dwater="insert into ST_RSVR_D(STCD,TM,RZ,Max_RZ,Max_TM,Min_RZ,Min_TM,DW,MEMO) values(?,?,?,?,?,?,?,dbo.FUNC_GETKR(?,?),?)";
                 pstm=conn.prepareStatement(sql_dwater);
                 pstm.setString(1,datewater.getStcd());
                 pstm.setDate(2,new java.sql.Date(datewater.getDate().getTime()));
@@ -385,9 +408,10 @@ public class WaterARainDao {
                 pstm.setTimestamp(7,new java.sql.Timestamp(datewater.getMindate().getTime()));
                 pstm.setBigDecimal(8,datewater.getRz());
                 pstm.setString(9,datewater.getStcd());
+                pstm.setString(10,datewater.getMemo());
                 pstm.executeUpdate();
             }else{
-                StringBuffer sb_dwater = new StringBuffer("update ST_RSVR_D set RZ=(RZ+?)/2");
+                StringBuffer sb_dwater = new StringBuffer("update ST_RSVR_D set RZ=?");
                 int maxsign=0,minsign=0;
                 if(datewater.getMaxrz()!=null){
                     sb_dwater.append(",Max_RZ=?,Max_TM=?");
@@ -397,7 +421,7 @@ public class WaterARainDao {
                     sb_dwater.append(",Min_RZ=?,Min_TM=?");
                     minsign+=2;
                 }
-                sb_dwater.append(",DW=dbo.FUNC_GETKR((RZ+?)/2,?) where STCD=? and TM=?");
+                sb_dwater.append(",DW=dbo.FUNC_GETKR(?,?),MEMO=? where STCD=? and TM=?");
                 sql_dwater=sb_dwater.toString();
                 pstm=conn.prepareStatement(sql_dwater);
                 pstm.setBigDecimal(1,datewater.getRz());
@@ -411,15 +435,16 @@ public class WaterARainDao {
                 }
                 pstm.setBigDecimal(2+maxsign+minsign,datewater.getRz());
                 pstm.setString(3+maxsign+minsign,datewater.getStcd());
-                pstm.setString(4+maxsign+minsign,datewater.getStcd());
-                pstm.setDate(5+maxsign+minsign,new java.sql.Date(datewater.getDate().getTime()));
+                pstm.setString(4+maxsign+minsign,datewater.getMemo());
+                pstm.setString(5+maxsign+minsign,datewater.getStcd());
+                pstm.setDate(6+maxsign+minsign,new java.sql.Date(datewater.getDate().getTime()));
                 pstm.executeUpdate();
             }
             //月水位表
             String sql_mwater="";
             //新增
             if(monwater.getAddsign()==0){
-                sql_mwater="insert into ST_RSVR_M(STCD,YR,MON,RZ,Max_RZ,Max_TM,Min_RZ,Min_TM,MW)values(?,?,?,?,?,?,?,?,dbo.FUNC_GETKR(?,?))";
+                sql_mwater="insert into ST_RSVR_M(STCD,YR,MON,RZ,Max_RZ,Max_TM,Min_RZ,Min_TM,MW,MEMO)values(?,?,?,?,?,?,?,?,dbo.FUNC_GETKR(?,?),?)";
                 pstm=conn.prepareStatement(sql_mwater);
                 pstm.setString(1,monwater.getStcd());
                 pstm.setInt(2,monwater.getYear());
@@ -431,10 +456,11 @@ public class WaterARainDao {
                 pstm.setTimestamp(8,new java.sql.Timestamp(monwater.getMindate().getTime()));
                 pstm.setBigDecimal(9,monwater.getRz());
                 pstm.setString(10,monwater.getStcd());
+                pstm.setString(11,monwater.getMemo());
                 pstm.executeUpdate();
             }//修改
             else{
-                StringBuffer sb_mwater = new StringBuffer("update ST_RSVR_M set RZ=(RZ+?)/2");
+                StringBuffer sb_mwater = new StringBuffer("update ST_RSVR_M set RZ=?");
                 int maxsign=0,minsign=0;
                 if(monwater.getMaxrz()!=null){
                     sb_mwater.append(",Max_RZ=?,Max_TM=?");
@@ -444,7 +470,7 @@ public class WaterARainDao {
                     sb_mwater.append(",Min_RZ=?,Min_TM=?");
                     minsign+=2;
                 }
-                sb_mwater.append(",MW=dbo.FUNC_GETKR((RZ+?)/2,?)  where STCD=? and YEAR=? and MON=?");
+                sb_mwater.append(",MW=dbo.FUNC_GETKR(?,?),MEMO=?  where STCD=? and YEAR=? and MON=?");
                 pstm=conn.prepareStatement(sql_mwater);
                 pstm.setBigDecimal(1,monwater.getRz());
                 if(monwater.getMaxrz()!=null){
@@ -457,9 +483,10 @@ public class WaterARainDao {
                 }
                 pstm.setBigDecimal(2+maxsign+minsign,monwater.getRz());
                 pstm.setString(3+maxsign+minsign,monwater.getStcd());
-                pstm.setString(4+maxsign+minsign,monwater.getStcd());
-                pstm.setInt(5+maxsign+minsign,monwater.getYear());
-                pstm.setInt(6+maxsign+minsign,monwater.getMon());
+                pstm.setString(4+maxsign+minsign,monwater.getMemo());
+                pstm.setString(5+maxsign+minsign,monwater.getStcd());
+                pstm.setInt(6+maxsign+minsign,monwater.getYear());
+                pstm.setInt(7+maxsign+minsign,monwater.getMon());
                 pstm.executeUpdate();
             }
             //站点预警信息
