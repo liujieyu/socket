@@ -72,7 +72,7 @@ public class AnalysisService {
                 realrain.setPdr(pdr);
                 realrain.setJssign("0");
                 String[] jbje=lastrain.getJssign().substring(1).split("");
-                //当前今日雨量减去当前小时的12个5分钟的累计雨量
+                //当前今日雨量减去当前小时12个5分钟的累计雨量
                 BigDecimal totalhour=new BigDecimal(0.0);
                 for(int i=0;i<frain.length;i++){
                     totalhour=totalhour.add(frain[i]);
