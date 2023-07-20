@@ -72,8 +72,12 @@ public class AnalysisService {
                 realrain.setPdr(pdr);
                 realrain.setJssign("0");
                 String[] jbje=lastrain.getJssign().substring(1).split("");
-                //当前今日雨量减去当前小时的雨量
-                BigDecimal daybeforehour=realrain.getDyp().subtract(realrain.getDrp());
+                //当前今日雨量减去当前小时的12个5分钟的累计雨量
+                BigDecimal totalhour=new BigDecimal(0.0);
+                for(int i=0;i<frain.length;i++){
+                    totalhour=totalhour.add(frain[i]);
+                }
+                BigDecimal daybeforehour=realrain.getDyp().subtract(totalhour);
                 //新增的5分钟雨量
                 List<Integer> insertlist=new ArrayList<Integer>();
                 //修改的5分钟雨量
@@ -542,7 +546,11 @@ public class AnalysisService {
                 realwater.setAlarm(alarm);
                 realwater.setJssign(param.getJssign()+jssign);
                 //小时水位采集
-                hourwater.setRz(new BigDecimal((param.getHrz().doubleValue()*param.getHmemo()+rz.doubleValue())/param.getHmemo()+1));
+                if(param.getHrz()==null){
+                    hourwater.setRz(rz);
+                }else{
+                    hourwater.setRz(new BigDecimal((param.getHrz().doubleValue()*param.getHmemo()+rz.doubleValue())/(param.getHmemo()+1)).setScale(3,BigDecimal.ROUND_HALF_UP));
+                }
                 hourwater.setDate(date);
                 hourwater.setHour(hour);
                 hourwater.setStcd(stcd);
@@ -580,7 +588,11 @@ public class AnalysisService {
                 //日水位采集
                 daywater.setDate(date);
                 daywater.setStcd(stcd);
-                daywater.setRz(new BigDecimal((param.getDrz().doubleValue()*param.getDmemo()+rz.doubleValue())/(param.getDmemo()+1)).setScale(3,BigDecimal.ROUND_HALF_UP));
+                if(param.getDrz()==null){
+                    daywater.setRz(rz);
+                }else{
+                    daywater.setRz(new BigDecimal((param.getDrz().doubleValue()*param.getDmemo()+rz.doubleValue())/(param.getDmemo()+1)).setScale(3,BigDecimal.ROUND_HALF_UP));
+                }
                 daywater.setMemo(String.valueOf((param.getDmemo()+1)));
                 if(param.getDmaxwl()==null){
                     daywater.setAddsign(0);
@@ -617,7 +629,11 @@ public class AnalysisService {
                 monwater.setYear(year);
                 monwater.setMon(mon);
                 monwater.setStcd(stcd);
-                monwater.setRz(new BigDecimal((param.getMrz().doubleValue()*param.getMmemo()+rz.doubleValue())/(param.getMmemo()+1)).setScale(3,BigDecimal.ROUND_HALF_UP));
+                if(param.getMrz()==null){
+                    monwater.setRz(rz);
+                }else{
+                    monwater.setRz(new BigDecimal((param.getMrz().doubleValue()*param.getMmemo()+rz.doubleValue())/(param.getMmemo()+1)).setScale(3,BigDecimal.ROUND_HALF_UP));
+                }
                 monwater.setMemo(String.valueOf((param.getDmemo()+1)));
                 if(param.getMmaxwl()==null){
                     monwater.setAddsign(0);
@@ -639,7 +655,6 @@ public class AnalysisService {
                         }else{
                             monwater.setMaxdate(nowtm);
                         }
-
                     }
                     if(param.getMminwl().doubleValue()>rz.doubleValue()){
                         monwater.setMinrz(rz);
@@ -676,8 +691,6 @@ public class AnalysisService {
         } catch (ParseException e) {
             logger.error(stcd+":加报采集日期转换错误",e);
         }
-
-
     }
 
     private String getJssign(int min) {

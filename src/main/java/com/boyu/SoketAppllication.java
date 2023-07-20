@@ -1,5 +1,6 @@
 package com.boyu;
 
+import com.boyu.dao.WaterARainDao;
 import com.boyu.service.ServerThread;
 import com.boyu.tool.CRC16Util;
 import com.boyu.tool.HEXUtil;

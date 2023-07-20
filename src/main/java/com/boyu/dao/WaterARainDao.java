@@ -470,7 +470,8 @@ public class WaterARainDao {
                     sb_mwater.append(",Min_RZ=?,Min_TM=?");
                     minsign+=2;
                 }
-                sb_mwater.append(",MW=dbo.FUNC_GETKR(?,?),MEMO=?  where STCD=? and YEAR=? and MON=?");
+                sb_mwater.append(",MW=dbo.FUNC_GETKR(?,?),MEMO=?  where STCD=? and YR=? and MON=?");
+                sql_mwater=sb_mwater.toString();
                 pstm=conn.prepareStatement(sql_mwater);
                 pstm.setBigDecimal(1,monwater.getRz());
                 if(monwater.getMaxrz()!=null){
@@ -530,5 +531,35 @@ public class WaterARainDao {
             logger.error("实时水情查询失败！",e);
         }
 
+    }
+
+    public void insertSWKR(){
+        Connection conn = DruidUtils.getConnection();
+        PreparedStatement pstm;
+        try {
+            conn.setAutoCommit(false);
+            String sql="insert into WRP_RSR_WLSTCPARRL(RSNM,RSCD,WL,STCP,AR,DTUPDT,MEMO)values(null,?,?,?,?,null,null)";
+            pstm=conn.prepareStatement(sql);
+            BigDecimal sw=new BigDecimal(20.8).setScale(1,BigDecimal.ROUND_HALF_UP);
+            for(double i=0.0;i<19.7;i=i+0.1){
+                BigDecimal jg=new BigDecimal(i).setScale(1,BigDecimal.ROUND_HALF_UP);
+                BigDecimal cursw=sw.add(jg).setScale(1,BigDecimal.ROUND_HALF_UP);
+                BigDecimal curkr=jg.multiply(new BigDecimal(8.0391*0.8)).setScale(4,BigDecimal.ROUND_HALF_UP);
+                BigDecimal curmj=jg.multiply(new BigDecimal(0.19938*0.54)).setScale(3,BigDecimal.ROUND_HALF_UP);
+                pstm.setString(1,"6060001501");
+                pstm.setBigDecimal(2,cursw);
+                pstm.setBigDecimal(3,curkr);
+                pstm.setBigDecimal(4,curmj);
+                pstm.addBatch();
+            }
+            pstm.executeBatch();
+            pstm.clearBatch();
+            conn.commit();
+            conn.setAutoCommit(true);
+            DruidUtils.closeAll(conn,pstm,null);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }

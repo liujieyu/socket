@@ -70,9 +70,9 @@ public class ServerThread implements Runnable {
                        case 51:analysis33H(request);  //加报
                            break;
                    }
-                   //每隔1秒执行一次
-                   Thread.sleep(1000*1);
                }
+               //每隔1秒执行一次
+               Thread.sleep(1000*1);
            }
         } catch (IOException e) {
             //通讯异常
@@ -102,7 +102,8 @@ public class ServerThread implements Runnable {
                 case 52:response=return34H(headbyte);//小时报
                     loginfo+=":小时报";
                     break;
-                case 51:                     //加报
+                case 51:response=return34H(headbyte);//加报
+                    loginfo+=":加报";//加报
                     break;
             }
             os.write(response);
@@ -112,8 +113,7 @@ public class ServerThread implements Runnable {
             logger.error(loginfo+"下行报文发送失败！",e);
         }
     }
-
-    //小时报返回下行报文
+    //小时报(加报)返回下行报文
     private byte[] return34H(byte[] headbyte){
         StringBuilder sbsub = new StringBuilder();
         String xxhead=HEXUtil.bytesToHexString(headbyte,true);
@@ -275,10 +275,10 @@ public class ServerThread implements Runnable {
         String tm=HEXUtil.bytesToDatetime(tmbyte);
         //获取加报标识 (雨量、水位、大坝)
         byte[] signbyte=new byte[2];
-        System.arraycopy(request, 37, tmbyte, 0, 2);
+        System.arraycopy(request, 37, signbyte, 0, 2);
         String sign=HEXUtil.bytesToHexString(signbyte,true);
         byte[] dambyte=new byte[3];
-        System.arraycopy(request, 37, tmbyte, 0, 3);
+        System.arraycopy(request, 37, dambyte, 0, 3);
         String signdam=HEXUtil.bytesToHexString(dambyte,true);
         if(sign.equals("2619")){
             analysisRain33(tm,request);
@@ -291,7 +291,98 @@ public class ServerThread implements Runnable {
     }
     //大坝安全加报
     private void analysisDam33(String tm,byte[] request){
-
+        //6个渗压测点编号
+        byte[] spprbyte=new byte[24];
+        System.arraycopy(request, 40, spprbyte, 0, 24);
+        String[] spprcd=HEXUtil.bytesToSpprCd(spprbyte);
+        //6个渗压水位
+        byte[] sywmbyte;
+        BigDecimal[] sywm=new BigDecimal[1];
+        if(spprcd.length==6){
+            sywmbyte=new byte[24];
+            System.arraycopy(request, 67, sywmbyte, 0, 24);
+            sywm=HEXUtil.bytesToSafeval(sywmbyte);
+        }
+        //2个渗流测点编号
+        byte[] slbyte=new byte[8];
+        System.arraycopy(request, 94, slbyte, 0, 8);
+        String[] slcd=HEXUtil.bytesToSpprCd(slbyte);
+        //2个渗流量
+        byte[] sllbyte;
+        BigDecimal[] sll=new BigDecimal[1];
+        if(slcd.length==2){
+            sllbyte=new byte[8];
+            System.arraycopy(request, 105, sllbyte, 0, 8);
+            sll=HEXUtil.bytesToSafeval(sllbyte);
+        }
+        //2个位移监测点编号
+        byte[] wycdbyte=new byte[8];
+        System.arraycopy(request, 116, wycdbyte, 0, 8);
+        String[] wycd=HEXUtil.bytesToSpprCd(wycdbyte);
+        //2个水平X位移
+        byte[] xhrbyte;
+        BigDecimal[] xhr=new BigDecimal[1];
+        if(wycd.length==2){
+            xhrbyte=new byte[10];
+            System.arraycopy(request, 127, xhrbyte, 0, 10);
+            xhr=HEXUtil.bytesToHRval(xhrbyte);
+        }
+        //2个水平Y位移
+        byte[] yhrbyte;
+        BigDecimal[] yhr=new BigDecimal[1];
+        if(wycd.length==2){
+            yhrbyte=new byte[10];
+            System.arraycopy(request, 140, yhrbyte, 0, 10);
+            yhr=HEXUtil.bytesToHRval(yhrbyte);
+        }
+        //2个垂直位移
+        byte[] vhrbyte;
+        BigDecimal[] vhr=new BigDecimal[1];
+        if(wycd.length==2){
+            vhrbyte=new byte[10];
+            System.arraycopy(request, 153, vhrbyte, 0, 10);
+            vhr=HEXUtil.bytesToHRval(vhrbyte);
+        }
+        //2个经度
+        byte[] eslgbyte;
+        BigDecimal[] eslg=new BigDecimal[1];
+        if(wycd.length==2){
+            eslgbyte=new byte[10];
+            System.arraycopy(request, 166, eslgbyte, 0, 10);
+            eslg=HEXUtil.bytesToEslg(eslgbyte,5);
+        }
+        //2个纬度
+        byte[] nrltbyte;
+        BigDecimal[] nrlt=new BigDecimal[1];
+        if(wycd.length==2){
+            nrltbyte=new byte[8];
+            System.arraycopy(request, 179, nrltbyte, 0, 8);
+            nrlt=HEXUtil.bytesToEslg(nrltbyte,4);
+        }
+        //2个垂直高程
+        byte[] inelbyte;
+        BigDecimal[] inel=new BigDecimal[1];
+        if(wycd.length==2){
+            inelbyte=new byte[8];
+            System.arraycopy(request,190,inelbyte,0,8);
+            inel=HEXUtil.bytesToSafeval(inelbyte);
+        }
+        //电压
+        byte[] volbyte=new byte[2];
+        System.arraycopy(request,200,volbyte,0,2);
+        String volstr=HEXUtil.bytesToHexString(volbyte,false);
+        BigDecimal vol=new BigDecimal(Double.parseDouble(volstr)/100).setScale(2,BigDecimal.ROUND_HALF_UP);
+        try {
+            Date tmdate=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(tm);
+            //大坝安全监测数据采集
+            safeservice.sppranalysis(STCD,tmdate,spprcd,sywm);
+            safeservice.spprlanalysis(STCD,tmdate,slcd,sll);
+            safeservice.srhrdsanalysis(STCD,tmdate,wycd,xhr,yhr,vhr,eslg,nrlt,inel);
+            //运行工况数据加报采集
+            safeservice.statusanalysisAdd(STCD,tmdate,vol);
+        } catch (ParseException e) {
+            logger.error(STCD+":大坝安全加报采集日期转换错误",e);
+        }
     }
     //雨量加报
     private void analysisRain33(String tm,byte[] request){
@@ -322,6 +413,24 @@ public class ServerThread implements Runnable {
     }
     //水位加报
     private void analysisWater33(String tm,byte[] request){
-
+        //瞬时水位
+        byte[] rvsrbyte=new byte[3];
+        System.arraycopy(request, 39, rvsrbyte, 0, 3);
+        String rvsrstr=HEXUtil.bytesToHexString(rvsrbyte,false);
+        BigDecimal rvsr=new BigDecimal(((double)Integer.parseInt(rvsrstr))/100).setScale(2,BigDecimal.ROUND_HALF_UP);
+        //电压
+        byte[] volbyte=new byte[2];
+        System.arraycopy(request,44,volbyte,0,2);
+        String volstr=HEXUtil.bytesToHexString(volbyte,false);
+        BigDecimal vol=new BigDecimal(Double.parseDouble(volstr)/100).setScale(2,BigDecimal.ROUND_HALF_UP);
+        try {
+            Date tmdate=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(tm);
+            //水位加报采集
+            service.wateranalysisAdd(STCD,tmdate,rvsr);
+            //运行工况数据加报采集
+            safeservice.statusanalysisAdd(STCD,tmdate,vol);
+        } catch (ParseException e) {
+            logger.error(STCD+":水位加报采集日期转换错误",e);
+        }
     }
 }
