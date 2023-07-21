@@ -380,6 +380,7 @@ public class ServerThread implements Runnable {
             safeservice.srhrdsanalysis(STCD,tmdate,wycd,xhr,yhr,vhr,eslg,nrlt,inel);
             //运行工况数据加报采集
             safeservice.statusanalysisAdd(STCD,tmdate,vol);
+            logger.info(STCD+":加报大坝安全监测数据采集入库！");
         } catch (ParseException e) {
             logger.error(STCD+":大坝安全加报采集日期转换错误",e);
         }
@@ -407,6 +408,7 @@ public class ServerThread implements Runnable {
             service.rainAddAnalysis(STCD,tmdate,train,drain);
             //运行工况数据加报采集
             safeservice.statusanalysisAdd(STCD,tmdate,vol);
+            logger.info(STCD+":加报雨量监测数据采集入库！");
         } catch (ParseException e) {
             logger.error(STCD+":雨量加报采集日期转换错误",e);
         }
@@ -429,6 +431,7 @@ public class ServerThread implements Runnable {
             service.wateranalysisAdd(STCD,tmdate,rvsr);
             //运行工况数据加报采集
             safeservice.statusanalysisAdd(STCD,tmdate,vol);
+            logger.info(STCD+":加报水位监测数据采集入库！");
         } catch (ParseException e) {
             logger.error(STCD+":水位加报采集日期转换错误",e);
         }

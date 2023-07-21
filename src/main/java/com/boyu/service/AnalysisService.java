@@ -201,7 +201,7 @@ public class AnalysisService {
             WaterParam param=waterARainDao.getWaterParam(stcd,date,hour,year,mon);
             //1小时内没有加时报
             if(param.getJssign().length()==1 && param.getJssign().equals("0")){
-                BigDecimal minrz=new BigDecimal(0),maxrz=new BigDecimal(0),sumrz=new BigDecimal(0);
+                BigDecimal minrz=new BigDecimal(99999),maxrz=new BigDecimal(0),sumrz=new BigDecimal(0);
                 Date mindate=new Date(nowtm.getTime()-(60-(0+1)*5)*60*1000),maxdate=new Date(nowtm.getTime()-(60-(0+1)*5)*60*1000);
                 for(int i=0;i<frsvr.length;i++){
                     if(frsvr[i].intValue()==-1){
@@ -346,7 +346,7 @@ public class AnalysisService {
                     realwater.setStcd(stcd);
                     waterARainDao.insertHourWater(realwater);
                 }else{
-                    BigDecimal minrz=new BigDecimal(0),maxrz=new BigDecimal(0),sumrz=new BigDecimal(0);
+                    BigDecimal minrz=new BigDecimal(99999),maxrz=new BigDecimal(0),sumrz=new BigDecimal(0);
                     Date mindate=new Date(nowtm.getTime()-(60-(insertlist.get(0)+1)*5)*60*1000),maxdate=new Date(nowtm.getTime()-(60-(insertlist.get(0)+1)*5)*60*1000);
                     for(int h=0;h<insertlist.size();h++){
                         int interval=insertlist.get(h);
