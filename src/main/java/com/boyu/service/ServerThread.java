@@ -261,7 +261,9 @@ public class ServerThread implements Runnable {
             safeservice.spprlanalysis(stcd,tmdate,slcd,sll);
             safeservice.srhrdsanalysis(stcd,tmdate,wycd,xhr,yhr,vhr,eslg,nrlt,inel);
             //运行工况数据采集
-            safeservice.statusanalysis(stcd,tmdate,mcnel,scnel,vol);
+            if(safeservice.existStatus(STCD,tmdate)) {
+                safeservice.statusanalysis(stcd, tmdate, mcnel, scnel, vol);
+            }
         } catch (ParseException e) {
             logger.error(stcd+":小时报采集日期转换错误",e);
         }
@@ -378,7 +380,9 @@ public class ServerThread implements Runnable {
             safeservice.spprlanalysis(STCD,tmdate,slcd,sll);
             safeservice.srhrdsanalysis(STCD,tmdate,wycd,xhr,yhr,vhr,eslg,nrlt,inel);
             //运行工况数据加报采集
-            safeservice.statusanalysisAdd(STCD,tmdate,vol);
+            if(safeservice.existStatus(STCD,tmdate)){
+                safeservice.statusanalysisAdd(STCD,tmdate,vol);
+            }
             logger.info(STCD+":加报大坝安全监测数据采集入库！");
         } catch (ParseException e) {
             logger.error(STCD+":大坝安全加报采集日期转换错误",e);
@@ -406,7 +410,9 @@ public class ServerThread implements Runnable {
             //雨量加报采集
             service.rainAddAnalysis(STCD,tmdate,train,drain);
             //运行工况数据加报采集
-            safeservice.statusanalysisAdd(STCD,tmdate,vol);
+            if(safeservice.existStatus(STCD,tmdate)) {
+                safeservice.statusanalysisAdd(STCD, tmdate, vol);
+            }
             logger.info(STCD+":加报雨量监测数据采集入库！");
         } catch (ParseException e) {
             logger.error(STCD+":雨量加报采集日期转换错误",e);
@@ -429,7 +435,9 @@ public class ServerThread implements Runnable {
             //水位加报采集
             service.wateranalysisAdd(STCD,tmdate,rvsr);
             //运行工况数据加报采集
-            safeservice.statusanalysisAdd(STCD,tmdate,vol);
+            if(safeservice.existStatus(STCD,tmdate)) {
+                safeservice.statusanalysisAdd(STCD, tmdate, vol);
+            }
             logger.info(STCD+":加报水位监测数据采集入库！");
         } catch (ParseException e) {
             logger.error(STCD+":水位加报采集日期转换错误",e);

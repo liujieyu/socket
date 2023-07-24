@@ -52,7 +52,7 @@ public class AnalysisService {
                     hislist.add(hisrain);
                 }
                 waterARainDao.insertHourRain(realrain,hislist,null);
-            }else{
+            }else if(tm.getTime()-lastrain.getTm().getTime()>0){
                 long minutes=(tm.getTime()-lastrain.getTm().getTime())/(60*1000);
                 BigDecimal intv=new BigDecimal(((double)minutes)/60).setScale(2,BigDecimal.ROUND_HALF_UP);
                 BigDecimal pdr;
@@ -247,7 +247,7 @@ public class AnalysisService {
                     hiswater.setJssign("0");
                     hislist.add(hiswater);
                 }
-                BigDecimal avgrz=sumrz.divide(new BigDecimal(frsvr.length)).setScale(3,BigDecimal.ROUND_HALF_UP);
+                BigDecimal avgrz=new BigDecimal(sumrz.doubleValue()/frsvr.length).setScale(3,BigDecimal.ROUND_HALF_UP);
                 //实时水位采集
                 realwater=hislist.get(hislist.size()-1);
                 BigDecimal xxwater;
@@ -392,7 +392,7 @@ public class AnalysisService {
                         hiswater.setJssign("0");
                         hislist.add(hiswater);
                     }
-                    BigDecimal avgrz=sumrz.divide(new BigDecimal(insertlist.size())).setScale(3,BigDecimal.ROUND_HALF_UP);
+                    //BigDecimal avgrz=sumrz.divide(new BigDecimal(insertlist.size())).setScale(3,BigDecimal.ROUND_HALF_UP);
                     //小时水位采集
                     hourwater.setAddsign(1);
                     hourwater.setRz(new BigDecimal((param.getHrz().doubleValue()*param.getHmemo()+sumrz.doubleValue())/(param.getHmemo()+insertlist.size())).setScale(3,BigDecimal.ROUND_HALF_UP));
@@ -489,7 +489,7 @@ public class AnalysisService {
      */
     public void wateranalysisAdd(String stcd,Date nowtm,BigDecimal rz){
         //实时水情采集
-        StRsvrR realwater=new StRsvrR();
+        StRsvrR realwater;
         //历史水情采集
         List<StRsvrR> hislist=new ArrayList<StRsvrR>();
         //小时水情采集
@@ -518,7 +518,7 @@ public class AnalysisService {
           Date  date = new SimpleDateFormat("yyyy-MM-dd").parse(ltmstr);
             WaterParam param=waterARainDao.getWaterParam(stcd,date,hour,year,mon);
             //判断加报观测时间是否和当前实时信息表中的数据是否一致，一致，不需要进行操作 不一致 进行插入操作
-            if(!param.getLastdate().equals(nowtm)){
+            if(param.getLastdate().getTime() != nowtm.getTime()){
                 //历史水位采集
                 StRsvrR hiswater=new StRsvrR();
                 hiswater.setStcd(stcd);

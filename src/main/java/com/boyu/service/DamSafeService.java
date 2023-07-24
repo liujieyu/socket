@@ -77,6 +77,14 @@ public class DamSafeService {
         }
         damSafeDao.insertSrhvrdsInfo(stcd,listhrds);
     }
+    //该时间的站点的运行工况是否存在
+    public boolean existStatus(String stcd,Date tm){
+        int count=damSafeDao.getstatuscount(stcd,tm);
+        if(count>0)
+            return false;
+        else
+            return true;
+    }
     //运行工况监测数据分析（小时报）
     public void statusanalysis(String stcd,Date tm,String mcnel,String scnel,BigDecimal vol){
         StStationStatus status=new StStationStatus();

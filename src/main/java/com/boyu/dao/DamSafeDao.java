@@ -10,7 +10,9 @@ import org.apache.log4j.Logger;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -217,6 +219,26 @@ public class DamSafeDao {
         } catch (SQLException e) {
             logger.error(stcd+"表面变形位移数据采集失败！",e);
         }
+    }
+    //判断当前时间的运行工况监测数据是否存在（防治重复插入）
+    public Integer getstatuscount(String stcd, Date tm){
+        Integer count=0;
+        Connection conn = DruidUtils.getConnection();
+        PreparedStatement pstm;
+        ResultSet rs;
+        String sql="select count(*) from ST_StationStatus_R where STCD=? and TM=?";
+        try {
+            pstm=conn.prepareStatement(sql);
+            pstm.setString(1,stcd);
+            pstm.setTimestamp(2,new java.sql.Timestamp(tm.getTime()));
+            rs=pstm.executeQuery();
+            if(rs.next()){
+                count = rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            logger.error(stcd+"运行工况数据获取失败！",e);
+        }
+        return count;
     }
     //运行工况数据采集(小时报)
     public void insertStatusInfo(StStationStatus status){

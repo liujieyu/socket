@@ -204,7 +204,7 @@ public class WaterARainDao {
                 param.setZcwl(res.getBigDecimal(4));
                 param.setXhwl(res.getBigDecimal(5));
                 param.setLastrz(res.getBigDecimal(6));
-                param.setLastdate(res.getDate(7));
+                param.setLastdate(res.getTimestamp(7));
                 param.setAlarm(res.getInt(8));
             }
             String sql_tzrz="select 'h' as bsign,Max_RZ,Min_RZ,RZ,MEMO from ST_RSVR_H where STCD=? and DT=? and TM=? " +
