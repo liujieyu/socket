@@ -1,10 +1,7 @@
 package com.boyu.service;
 
 import com.boyu.dao.WaterARainDao;
-import com.boyu.pojo.StAlarmInfo;
-import com.boyu.pojo.StPptnR;
-import com.boyu.pojo.StRsvrR;
-import com.boyu.pojo.WaterParam;
+import com.boyu.pojo.*;
 import org.apache.log4j.Logger;
 
 import java.math.BigDecimal;
@@ -691,6 +688,15 @@ public class AnalysisService {
         } catch (ParseException e) {
             logger.error(stcd+":加报采集日期转换错误",e);
         }
+    }
+
+    //小时图像报分析
+    public void imageanalysis(String stcd,Date tm,String path){
+        StJpgR pojo=new StJpgR();
+        pojo.setStcd(stcd);
+        pojo.setTm(tm);
+        pojo.setSave_Path(path);
+        waterARainDao.insertImageInfo(pojo);
     }
 
     private String getJssign(int min) {

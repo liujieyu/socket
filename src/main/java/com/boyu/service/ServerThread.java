@@ -69,6 +69,10 @@ public class ServerThread implements Runnable {
                            break;
                        case 51:analysis33H(request);  //加报
                            break;
+                       case -28:analysisJpgE4E3H(request,true);//图像小时报
+                           break;
+                       case -29:analysisJpgE4E3H(request,false);//图像加报
+                           break;
                    }
                }
                //每隔1秒执行一次
@@ -104,6 +108,12 @@ public class ServerThread implements Runnable {
                     break;
                 case 51:response=return34H(headbyte);//加报
                     loginfo+=":加报";//加报
+                    break;
+                case -28:response=return34H(headbyte);//图像小时报
+                    loginfo+=":图像小时报";
+                    break;
+                case -29:response=return34H(headbyte);
+                    loginfo+=":图像加报";
                     break;
             }
             os.write(response);
@@ -442,5 +452,51 @@ public class ServerThread implements Runnable {
         } catch (ParseException e) {
             logger.error(STCD+":水位加报采集日期转换错误",e);
         }
+    }
+    //图像小时(加)报 小时报为true,加报为false
+    private void analysisJpgE4E3H(byte[] request,boolean hoursign){
+        //站点编码
+        String stcd=STCD;
+        //发报时间
+        byte[] tmbyte=new byte[6];
+        System.arraycopy(request, 16, tmbyte, 0, 6);
+        String tm=HEXUtil.bytesToDatetime(tmbyte);
+        //图像数据长度
+        byte[] lenbyte=new byte[1];
+        System.arraycopy(request, 31, lenbyte, 0, 1);
+        String lenstr=HEXUtil.bytesToHexString(lenbyte,false);
+        int imglen=HEXUtil.hex2Dec(lenstr);
+        //图像地址连接
+        byte[] urlbyte=new byte[imglen];
+        System.arraycopy(request, 32, urlbyte, 0, imglen);
+        String urlstr=HEXUtil.bytesToHexString(urlbyte,true);
+        String imgurl=HEXUtil.hexStringToString(urlstr);
+        //电压
+        byte[] volbyte=new byte[2];
+        System.arraycopy(request, 32+imglen+2, volbyte, 0, 2);
+        String volstr=HEXUtil.bytesToHexString(volbyte,false);
+        BigDecimal vol=new BigDecimal(Double.parseDouble(volstr)/100).setScale(2,BigDecimal.ROUND_HALF_UP);
+        try {
+            Date tmdate=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(tm);
+            //图像信息采集
+            service.imageanalysis(stcd,tmdate,imgurl);
+            //运行工况数据加报采集
+            if(safeservice.existStatus(STCD,tmdate)) {
+                safeservice.statusanalysisAdd(STCD, tmdate, vol);
+            }
+        } catch (ParseException e) {
+            if(hoursign){
+                logger.error(STCD+":图像小时报采集日期转换错误",e);
+            }else{
+                logger.error(STCD+":图像加报采集日期转换错误",e);
+            }
+
+        }
+        if(hoursign){
+            logger.info(stcd+":图像小时报数据采集入库！");
+        }else{
+            logger.info(stcd+":图像加报数据采集入库！");
+        }
+
     }
 }

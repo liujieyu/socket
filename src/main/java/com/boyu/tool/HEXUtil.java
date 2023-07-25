@@ -47,9 +47,34 @@ public class HEXUtil {
             return sb.toString();
         }
     }
-
     /**
-     * 解析观测时间
+     * 16进制转换成为string类型字符串
+     * @param s
+     * @return
+     */
+    public static String hexStringToString(String s) {
+        if (s == null || s.equals("")) {
+            return null;
+        }
+        s = s.replace(" ", "");
+        byte[] baKeyword = new byte[s.length() / 2];
+        for (int i = 0; i < baKeyword.length; i++) {
+            try {
+                baKeyword[i] = (byte) (0xff & Integer.parseInt(s.substring(i * 2, i * 2 + 2), 16));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+            s = new String(baKeyword, "UTF-8");
+            new String();
+        } catch (Exception e1) {
+            e1.printStackTrace();
+        }
+        return s;
+    }
+    /**
+     * 解析观测时间(或者发报时间)
      * @param bytes
      * @return
      */
@@ -81,7 +106,17 @@ public class HEXUtil {
             sb.append("0");
         }
         sb.append(min);
-        sb.append(":00");
+        if(bytes.length==5){
+            sb.append(":00");
+        }else{
+            sb.append(":");
+            String second=Integer.toHexString(0xFF & bytes[5]);
+            if(second.length()==1){
+                sb.append("0");
+            }
+            sb.append(second);
+        }
+
         return sb.toString();
     }
 

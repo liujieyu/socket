@@ -2,10 +2,7 @@ package com.boyu.dao;
 
 import com.boyu.dboper.C3p0Utils;
 import com.boyu.dboper.DruidUtils;
-import com.boyu.pojo.StAlarmInfo;
-import com.boyu.pojo.StPptnR;
-import com.boyu.pojo.StRsvrR;
-import com.boyu.pojo.WaterParam;
+import com.boyu.pojo.*;
 import org.apache.log4j.Logger;
 
 import java.math.BigDecimal;
@@ -512,6 +509,34 @@ public class WaterARainDao {
 
     }
 
+    /**
+     * 保存图像监测信息
+     * @param stjpg
+     */
+    public void insertImageInfo(StJpgR stjpg){
+        Connection conn = DruidUtils.getConnection();
+        PreparedStatement pstm;
+        try {
+            conn.setAutoCommit(false);
+            String sql_real="update ST_JPG_R set TM=?,Save_Path=? where STCD=?";
+            pstm=conn.prepareStatement(sql_real);
+            pstm.setTimestamp(1,new java.sql.Timestamp(stjpg.getTm().getTime()));
+            pstm.setString(2,stjpg.getSave_Path());
+            pstm.setString(3,stjpg.getStcd());
+            pstm.executeUpdate();
+            String sql_his="insert into ST_JPG_H(STCD,TM,Save_Path) values (?,?,?)";
+            pstm=conn.prepareStatement(sql_his);
+            pstm.setString(1,stjpg.getStcd());
+            pstm.setTimestamp(2,new java.sql.Timestamp(stjpg.getTm().getTime()));
+            pstm.setString(3,stjpg.getSave_Path());
+            pstm.executeUpdate();
+            conn.commit();
+            conn.setAutoCommit(true);
+            DruidUtils.closeAll(conn,pstm,null);
+        } catch (SQLException e) {
+            logger.error(stjpg.getStcd()+":实时图像数据采集失败！",e);
+        }
+    }
     public void findStRsvrR() {
         Connection conn = DruidUtils.getConnection();
         PreparedStatement pstm;
