@@ -24,6 +24,10 @@ public class AnalysisService {
         StPptnR lastrain=waterARainDao.getRealRain(stcd);
             //1小时内没有加时报
             if(lastrain.getJssign().length()==1 && lastrain.getJssign().equals("0")){
+                if(tm.getTime()-lastrain.getTm().getTime()==0){
+                    logger.info(stcd + ":此小时的雨情监测数据已存在！");
+                    return;
+                }
                 StPptnR realrain=new StPptnR();
                 realrain.setStcd(stcd);
                 realrain.setTm(tm);
@@ -46,10 +50,12 @@ public class AnalysisService {
                     hisrain.setTm(new Date(tm.getTime()-(60-(i+1)*5)*60*1000));
                     hisrain.setDrp(frain[i].setScale(1,BigDecimal.ROUND_HALF_UP));
                     hisrain.setDyp(daybeforehour);
+                    hisrain.setPdr(new BigDecimal(0.05));
+                    hisrain.setIntv(new BigDecimal(0.08));
                     hislist.add(hisrain);
                 }
                 waterARainDao.insertHourRain(realrain,hislist,null);
-            }else if(tm.getTime()-lastrain.getTm().getTime()>0){
+            }else{
                 long minutes=(tm.getTime()-lastrain.getTm().getTime())/(60*1000);
                 BigDecimal intv=new BigDecimal(((double)minutes)/60).setScale(2,BigDecimal.ROUND_HALF_UP);
                 BigDecimal pdr;
@@ -87,6 +93,11 @@ public class AnalysisService {
                                 insertlist.add(s);
                             }
                             updatelist.add(interval);
+                            if(jbje.length==1){
+                                for(int s=interval+1;s<12;s++){
+                                    insertlist.add(s);
+                                }
+                            }
                         }
                     }else{
                         int last=Integer.parseInt(jbje[i-1],16)-1;
@@ -117,8 +128,14 @@ public class AnalysisService {
                     hisrain.setStcd(stcd);
                     hisrain.setTm(new Date(tm.getTime()-(60-(inteval+1)*5)*60*1000));
                     hisrain.setDrp(frain[inteval]);
+                    hisrain.setPdr(new BigDecimal(0.0));
                     hisrain.setDyp(dyp);
+                    hisrain.setIntv(new BigDecimal(0.0));
                     hislist.add(hisrain);
+                    if(inteval==11){
+                        hisrain.setPdr(realrain.getPdr());
+                        hisrain.setIntv(realrain.getIntv());
+                    }
                 }
                 List<StPptnR> uplist=new ArrayList<StPptnR>();
                 for(int i=0;i<updatelist.size();i++){
@@ -126,19 +143,20 @@ public class AnalysisService {
                     if(frain[inteval].intValue()==-1){
                         continue;
                     }
-                    BigDecimal dyp=new BigDecimal(daybeforehour.floatValue()).setScale(1,BigDecimal.ROUND_HALF_UP);
-                    for(int h=0;h<inteval+1;h++){
-                        dyp=dyp.add(frain[h]);
-                    }
+//                    BigDecimal dyp=new BigDecimal(daybeforehour.floatValue()).setScale(1,BigDecimal.ROUND_HALF_UP);
+//                    for(int h=0;h<inteval+1;h++){
+//                        dyp=dyp.add(frain[h]);
+//                    }
                     StPptnR hisrain=new StPptnR();
                     hisrain.setStcd(stcd);
                     hisrain.setTm(new Date(tm.getTime()-(60-(inteval+1)*5)*60*1000));
                     hisrain.setDrp(frain[inteval]);
-                    hisrain.setDyp(dyp);
+//                    hisrain.setDyp(dyp);
                     uplist.add(hisrain);
                 }
                 waterARainDao.insertHourRain(realrain,hislist,uplist);
             }
+        logger.info(stcd + ":雨情监测数据已入库！");
     }
     //加时报雨情信息分析
     public void rainAddAnalysis(String stcd,Date tm,BigDecimal train,BigDecimal drain){
@@ -169,9 +187,26 @@ public class AnalysisService {
             realrain.setPdr(pdr);
             realrain.setJssign(jssign);
             waterARainDao.insertAddRain(realrain);
+            logger.info(stcd + ":雨情监测数据入库！");
+        }else{
+            logger.info(stcd + ":此观测时间的雨情监测数据已存在！");
         }
     }
-
+    //测试报雨情信息分析
+    public void rainTestAnalysis(String stcd,Date tm,BigDecimal train,BigDecimal hrain){
+        StPptnR realrain=new StPptnR();
+        realrain.setStcd(stcd);
+        realrain.setTm(tm);
+        realrain.setDrp(hrain.setScale(1,BigDecimal.ROUND_HALF_UP));
+        realrain.setDyp(hrain.setScale(1,BigDecimal.ROUND_HALF_UP));
+        realrain.setTotal(train.setScale(1,BigDecimal.ROUND_HALF_UP));
+        realrain.setIntv(new BigDecimal(1.0));
+        realrain.setPdr(new BigDecimal(1.0));
+        realrain.setJssign("0");
+        List<StPptnR> hislist=new ArrayList<StPptnR>();
+        hislist.add(realrain);
+        waterARainDao.insertHourRain(realrain,hislist,null);
+    }
     //小时报水情信息分析
     public void wateranalysis(String stcd,Date nowtm,BigDecimal[] frsvr){
         //实时水情采集
@@ -198,6 +233,10 @@ public class AnalysisService {
             WaterParam param=waterARainDao.getWaterParam(stcd,date,hour,year,mon);
             //1小时内没有加时报
             if(param.getJssign().length()==1 && param.getJssign().equals("0")){
+                if(param.getLastdate().getTime()-nowtm.getTime()==0){
+                    logger.info(stcd + ":此小时的水情监测数据已存在！");
+                    return;
+                }
                 BigDecimal minrz=new BigDecimal(99999),maxrz=new BigDecimal(0),sumrz=new BigDecimal(0);
                 Date mindate=new Date(nowtm.getTime()-(60-(0+1)*5)*60*1000),maxdate=new Date(nowtm.getTime()-(60-(0+1)*5)*60*1000);
                 for(int i=0;i<frsvr.length;i++){
@@ -269,7 +308,11 @@ public class AnalysisService {
                 //日水位采集
                 daywater.setDate(date);
                 daywater.setStcd(stcd);
-                daywater.setRz(new BigDecimal((param.getDrz().doubleValue()*param.getDmemo()+sumrz.doubleValue())/(param.getDmemo()+frsvr.length)).setScale(3,BigDecimal.ROUND_HALF_UP));
+                if(param.getDrz()==null){
+                    daywater.setRz(avgrz);
+                }else{
+                    daywater.setRz(new BigDecimal((param.getDrz().doubleValue()*param.getDmemo()+sumrz.doubleValue())/(param.getDmemo()+frsvr.length)).setScale(3,BigDecimal.ROUND_HALF_UP));
+                }
                 daywater.setMemo(String.valueOf((param.getDmemo()+frsvr.length)));
                 if(param.getDmaxwl()==null){
                     daywater.setAddsign(0);
@@ -292,7 +335,11 @@ public class AnalysisService {
                 monwater.setYear(year);
                 monwater.setMon(mon);
                 monwater.setStcd(stcd);
-                monwater.setRz(new BigDecimal((param.getMrz().doubleValue()*param.getMmemo()+sumrz.doubleValue())/(param.getMmemo()+frsvr.length)).setScale(3,BigDecimal.ROUND_HALF_UP));
+                if(param.getMrz()==null){
+                    monwater.setRz(avgrz);
+                }else{
+                    monwater.setRz(new BigDecimal((param.getMrz().doubleValue()*param.getMmemo()+sumrz.doubleValue())/(param.getMmemo()+frsvr.length)).setScale(3,BigDecimal.ROUND_HALF_UP));
+                }
                 monwater.setMemo(String.valueOf((param.getDmemo()+frsvr.length)));
                 if(param.getMmaxwl()==null){
                     monwater.setAddsign(0);
@@ -311,7 +358,41 @@ public class AnalysisService {
                         monwater.setMindate(mindate);
                     }
                 }
-                waterARainDao.insertHourWater(realwater,hislist,hourwater,daywater,monwater,null);
+                //站点预警信息
+                if(param.getAlarm()>alarm){
+                    alarminfo.setStcd(stcd);
+                    alarminfo.setSttp("RR");
+                    alarminfo.setAlarm(alarm);
+                    alarminfo.setTm(realwater.getTm());
+                    switch (alarm){
+                        case 1:alarminfo.setMv(realwater.getRz().subtract(param.getXhwl()));
+                            if(alarminfo.getMv().doubleValue()==0){
+                                alarminfo.setContent("达到校核水位");
+                            }else{
+                                alarminfo.setContent("超校核水位"+alarminfo.getMv()+"m");
+                            }
+                            alarminfo.setAlarmv(param.getXhwl());
+                            break;
+                        case 2:alarminfo.setMv(realwater.getRz().subtract(param.getZcwl()));
+                            if(alarminfo.getMv().doubleValue()==0){
+                                alarminfo.setContent("达到正常蓄水位");
+                            }else{
+                                alarminfo.setContent("超正常蓄水位"+alarminfo.getMv()+"m");
+                            }
+                            alarminfo.setAlarmv(param.getZcwl());
+                            break;
+                        case 3:alarminfo.setMv(realwater.getRz().subtract(xxwater));
+                            if(alarminfo.getMv().doubleValue()==0){
+                                alarminfo.setContent("达到汛限水位");
+                            }else{
+                                alarminfo.setContent("超汛限水位"+alarminfo.getMv()+"m");
+                            }
+                            alarminfo.setAlarmv(xxwater);
+                            break;
+                    }
+                }
+                waterARainDao.insertHourWater(realwater,hislist,hourwater,daywater,monwater,alarminfo);
+                logger.info(stcd + ":水情监测数据入库！");
             }else{
                 String[] jbjg=param.getJssign().substring(1).split("");
                 List<Integer> insertlist=new ArrayList<Integer>();
@@ -342,6 +423,7 @@ public class AnalysisService {
                     realwater.setJssign("0");
                     realwater.setStcd(stcd);
                     waterARainDao.insertHourWater(realwater);
+                    logger.info(stcd + ":此小时的水情监测数据已存在！");
                 }else{
                     BigDecimal minrz=new BigDecimal(99999),maxrz=new BigDecimal(0),sumrz=new BigDecimal(0);
                     Date mindate=new Date(nowtm.getTime()-(60-(insertlist.get(0)+1)*5)*60*1000),maxdate=new Date(nowtm.getTime()-(60-(insertlist.get(0)+1)*5)*60*1000);
@@ -455,23 +537,35 @@ public class AnalysisService {
                             alarminfo.setTm(realwater.getTm());
                             switch (alarm){
                                 case 1:alarminfo.setMv(realwater.getRz().subtract(param.getXhwl()));
-                                       alarminfo.setContent("超校核水位"+alarminfo.getMv()+"m");
-                                       alarminfo.setAlarmv(param.getXhwl());
+                                    if(alarminfo.getMv().doubleValue()==0){
+                                        alarminfo.setContent("达到校核水位");
+                                    }else{
+                                        alarminfo.setContent("超校核水位"+alarminfo.getMv()+"m");
+                                    }
+                                    alarminfo.setAlarmv(param.getXhwl());
                                     break;
                                 case 2:alarminfo.setMv(realwater.getRz().subtract(param.getZcwl()));
-                                       alarminfo.setContent("超正常蓄水位"+alarminfo.getMv()+"m");
-                                       alarminfo.setAlarmv(param.getZcwl());
+                                    if(alarminfo.getMv().doubleValue()==0){
+                                        alarminfo.setContent("达到正常蓄水位");
+                                    }else{
+                                        alarminfo.setContent("超正常蓄水位"+alarminfo.getMv()+"m");
+                                    }
+                                    alarminfo.setAlarmv(param.getZcwl());
                                     break;
                                 case 3:alarminfo.setMv(realwater.getRz().subtract(xxwater));
-                                       alarminfo.setContent("超汛限水位"+alarminfo.getMv()+"m");
+                                    if(alarminfo.getMv().doubleValue()==0){
+                                        alarminfo.setContent("达到汛限水位");
+                                    }else{
+                                        alarminfo.setContent("超汛限水位"+alarminfo.getMv()+"m");
+                                    }
                                        alarminfo.setAlarmv(xxwater);
                                     break;
                             }
                         }
                         waterARainDao.insertHourWater(realwater,hislist,hourwater,daywater,monwater,alarminfo);
                     }
+                    logger.info(stcd + ":水情监测数据入库！");
                 }
-
             }
         } catch (ParseException e) {
             logger.error(stcd+":小时报采集日期转换错误",e);
@@ -670,24 +764,108 @@ public class AnalysisService {
                     alarminfo.setTm(realwater.getTm());
                     switch (alarm){
                         case 1:alarminfo.setMv(realwater.getRz().subtract(param.getXhwl()));
-                            alarminfo.setContent("超校核水位"+alarminfo.getMv()+"m");
+                            if(alarminfo.getMv().doubleValue()==0){
+                                alarminfo.setContent("达到校核水位");
+                            }else{
+                                alarminfo.setContent("超校核水位"+alarminfo.getMv()+"m");
+                            }
                             alarminfo.setAlarmv(param.getXhwl());
                             break;
                         case 2:alarminfo.setMv(realwater.getRz().subtract(param.getZcwl()));
-                            alarminfo.setContent("超正常蓄水位"+alarminfo.getMv()+"m");
+                            if(alarminfo.getMv().doubleValue()==0){
+                                alarminfo.setContent("达到正常蓄水位");
+                            }else{
+                                alarminfo.setContent("超正常蓄水位"+alarminfo.getMv()+"m");
+                            }
                             alarminfo.setAlarmv(param.getZcwl());
                             break;
                         case 3:alarminfo.setMv(realwater.getRz().subtract(xxwater));
-                            alarminfo.setContent("超汛限水位"+alarminfo.getMv()+"m");
+                            if(alarminfo.getMv().doubleValue()==0){
+                                alarminfo.setContent("达到汛限水位");
+                            }else{
+                                alarminfo.setContent("超汛限水位"+alarminfo.getMv()+"m");
+                            }
                             alarminfo.setAlarmv(xxwater);
                             break;
                     }
                 }
                 waterARainDao.insertHourWater(realwater,hislist,hourwater,daywater,monwater,alarminfo);
+                logger.info(stcd + ":水情监测数据入库！");
+            }else{
+                logger.info(stcd + ":此观测时间的水情监测数据已存在！");
             }
         } catch (ParseException e) {
             logger.error(stcd+":加报采集日期转换错误",e);
         }
+    }
+
+    //测试报水情分析
+    public void waterTestAnanlysis(String stcd,Date nowtm,BigDecimal rz){
+        //实时水情采集
+        StRsvrR realwater;
+        //历史水情采集
+        List<StRsvrR> hislist=new ArrayList<StRsvrR>();
+        //小时水情采集
+        StRsvrR hourwater=new StRsvrR();
+        //日水情采集
+        StRsvrR daywater=new StRsvrR();
+        //月水情采集
+        StRsvrR monwater=new StRsvrR();
+        //历史水位采集
+        StRsvrR hiswater=new StRsvrR();
+        hiswater.setStcd(stcd);
+        hiswater.setTm(nowtm);
+        hiswater.setRz(rz);
+        hiswater.setCv(new BigDecimal(0.0));
+        hiswater.setRwptn("6");
+        hislist.add(hiswater);
+        //实时水位采集
+        realwater=hiswater;
+        realwater.setAlarm(4);
+        realwater.setJssign("0");
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(nowtm);
+        int year=cal.get(Calendar.YEAR);
+        int mon=cal.get(Calendar.MONTH);
+        int hour=cal.get(Calendar.HOUR_OF_DAY);
+        cal.set(Calendar.HOUR_OF_DAY,0);
+        cal.set(Calendar.MINUTE,0);
+        cal.set(Calendar.SECOND,0);
+        cal.set(Calendar.MILLISECOND,0);
+        Date date=cal.getTime();
+        //小时水位采集
+        hourwater.setAddsign(0);
+        hourwater.setRz(rz);
+        hourwater.setDate(date);
+        hourwater.setHour(hour);
+        hourwater.setStcd(stcd);
+        hourwater.setMemo("1");
+        hourwater.setMaxrz(rz);
+        hourwater.setMaxdate(nowtm);
+        hourwater.setMinrz(rz);
+        hourwater.setMindate(nowtm);
+        //日水位采集
+        daywater.setAddsign(0);
+        daywater.setDate(date);
+        daywater.setStcd(stcd);
+        daywater.setRz(rz);
+        daywater.setMemo("1");
+        daywater.setMaxrz(rz);
+        daywater.setMaxdate(nowtm);
+        daywater.setMinrz(rz);
+        daywater.setMindate(nowtm);
+        //月水位采集
+        monwater.setAddsign(0);
+        monwater.setYear(year);
+        monwater.setMon(mon);
+        monwater.setStcd(stcd);
+        monwater.setRz(rz);
+        monwater.setMemo("1");
+        monwater.setMaxrz(rz);
+        monwater.setMaxdate(nowtm);
+        monwater.setMinrz(rz);
+        monwater.setMindate(nowtm);
+        waterARainDao.insertHourWater(realwater,hislist,hourwater,daywater,monwater,null);
     }
 
     //小时图像报分析
@@ -697,6 +875,7 @@ public class AnalysisService {
         pojo.setTm(tm);
         pojo.setSave_Path(path);
         waterARainDao.insertImageInfo(pojo);
+        logger.info(stcd + ":图像数据入库！");
     }
 
     private String getJssign(int min) {
@@ -761,9 +940,9 @@ public class AnalysisService {
         int alarm = 4;
         if (realwater.getRz().doubleValue() >= xxwater.doubleValue() && realwater.getRz().doubleValue() < param.getZcwl().doubleValue()) {
             alarm = 3;
-        } else if (realwater.getRz().doubleValue() >= param.getZcwl().doubleValue() && realwater.getRz().doubleValue() <= param.getXhwl().doubleValue()) {
+        } else if (realwater.getRz().doubleValue() >= param.getZcwl().doubleValue() && realwater.getRz().doubleValue() < param.getXhwl().doubleValue()) {
             alarm = 2;
-        } else if (realwater.getRz().doubleValue() > param.getXhwl().doubleValue()) {
+        } else if (realwater.getRz().doubleValue() >= param.getXhwl().doubleValue()) {
             alarm = 1;
         }
         return alarm;

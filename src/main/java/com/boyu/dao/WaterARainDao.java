@@ -115,7 +115,7 @@ public class WaterARainDao {
                 }
             }
             if(hisinfo!=null && hisinfo.size()>0){
-                String sql_his="insert into ST_PPTN_R(STCD,TM,DRP,DYP)values(?,?,?,?)";
+                String sql_his="insert into ST_PPTN_R(STCD,TM,DRP,DYP,PDR,INTV)values(?,?,?,?,?,?)";
                 pstm=conn.prepareStatement(sql_his);
                 for(int i=0;i<hisinfo.size();i++){
                     StPptnR hisrain=hisinfo.get(i);
@@ -123,6 +123,8 @@ public class WaterARainDao {
                     pstm.setTimestamp(2,new java.sql.Timestamp(hisrain.getTm().getTime()));
                     pstm.setBigDecimal(3,hisrain.getDrp());
                     pstm.setBigDecimal(4,hisrain.getDyp());
+                    pstm.setBigDecimal(5,hisrain.getPdr());
+                    pstm.setBigDecimal(6,hisrain.getIntv());
                     if(hisinfo.size()>1){
                         pstm.addBatch();
                     }
@@ -160,12 +162,14 @@ public class WaterARainDao {
             pstm.setString(7, realinfo.getJssign());
             pstm.setString(8, realinfo.getStcd());
             pstm.executeUpdate();
-            String sql_his="insert into ST_PPTN_R(STCD,TM,DRP,DYP)values(?,?,?,?)";
+            String sql_his="insert into ST_PPTN_R(STCD,TM,DRP,DYP,PDR,INTV)values(?,?,?,?,?,?)";
             pstm=conn.prepareStatement(sql_his);
             pstm.setString(1,realinfo.getStcd());
             pstm.setTimestamp(2,new java.sql.Timestamp(realinfo.getTm().getTime()));
             pstm.setBigDecimal(3,realinfo.getDrp());
             pstm.setBigDecimal(4,realinfo.getDyp());
+            pstm.setBigDecimal(5,realinfo.getPdr());
+            pstm.setBigDecimal(6,realinfo.getIntv());
             pstm.executeUpdate();
             conn.commit();
             conn.setAutoCommit(true);
@@ -283,11 +287,14 @@ public class WaterARainDao {
         Connection conn=DruidUtils.getConnection();
         PreparedStatement pstm;
         try {
+            conn.setAutoCommit(false);
             String sql_real="update ST_RSVR_R1 set JSSIGN=? where STCD=?";
             pstm=conn.prepareStatement(sql_real);
             pstm.setString(1,realwater.getJssign());
             pstm.setString(2,realwater.getStcd());
             pstm.executeUpdate();
+            conn.commit();
+            conn.setAutoCommit(true);
             DruidUtils.closeAll(conn,pstm,null);
         } catch (SQLException e) {
             logger.error(realwater.getStcd()+":小时报实时水位采集失败！",e);

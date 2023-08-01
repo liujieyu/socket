@@ -22,6 +22,72 @@ public class DamSafeDao {
     static Logger logger = Logger.getLogger(DamSafeDao.class.getName());
 
     /**
+     * 大坝安全监测 该时间是否已插入了数据
+     * @param mstm
+     * @return
+     */
+    public Integer getSpprAllCount(Date mstm,List<String> spprlist,List<String> sllist,List<String> wylist){
+        int count=0;
+        Connection conn = DruidUtils.getConnection();
+        PreparedStatement pstm;
+        ResultSet rs;
+        int paramcount=0;
+        String sql_query="";
+           if(spprlist.size()>0){
+               String spprcds="";
+               for(int i=0;i<spprlist.size();i++){
+                   spprcds+="'"+spprlist.get(i)+"'";
+                   if(i<spprlist.size()-1){
+                       spprcds+=",";
+                   }
+               }
+               sql_query+="select count(*) from WRP_SPG_SPPR1 where MSTM=? and MPCD in("+spprcds+")";
+               paramcount++;
+           }
+           if(sllist.size()>0){
+               if(spprlist.size()>0){
+                   sql_query+=" union all ";
+               }
+               String sllcds="";
+               for(int i=0;i<sllist.size();i++){
+                   sllcds+="'"+sllist.get(i)+"'";
+                   if(i<sllist.size()-1){
+                       sllcds+=",";
+                   }
+               }
+               sql_query+="select count(*) from WRP_SPG_SPPR_L1 where MSTM=? and MPCD in("+sllcds+")";
+               paramcount++;
+           }
+           if(wylist.size()>0){
+               if(sllist.size()>0){
+                   sql_query+=" union all ";
+               }
+               String wycds="";
+               for(int i=0;i<wylist.size();i++){
+                   wycds+="'"+wylist.get(i)+"'";
+                   if(i<wylist.size()-1){
+                       wycds+=",";
+                   }
+               }
+               sql_query+="select count(*) from WRP_DFR_SRHRDS1 where MSTM=? and MPCD in("+wycds+")";
+               paramcount++;
+           }
+        try {
+            pstm=conn.prepareStatement(sql_query);
+            for(int i=1;i<=paramcount;i++){
+                pstm.setTimestamp(i,new java.sql.Timestamp(mstm.getTime()));
+            }
+            rs=pstm.executeQuery();
+            while (rs.next()){
+                count+=rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            logger.error("查询大坝安全监测记录数失败！",e);
+        }
+        return count;
+    }
+
+    /**
      * 插入渗压监测数据
      * @param spprlist
      */

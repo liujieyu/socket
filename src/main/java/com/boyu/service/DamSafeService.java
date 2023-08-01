@@ -21,6 +21,40 @@ public class DamSafeService {
     static Logger logger = Logger.getLogger(DamSafeService.class.getName());
     //大坝安全监测信息入库
     private DamSafeDao damSafeDao=new DamSafeDao();
+    //判断大坝安全指定时间是否已插入数据
+    public boolean existspprAllByTime(String stcd,Date mstm,String[] spprcd,String[] slcd,String[] wycd){
+        List<String> spprlist=new ArrayList<String>();
+        List<String> sllist=new ArrayList<String>();
+        List<String> wylist=new ArrayList<String>();
+        if(spprcd.length==6){
+            for(int i=0;i<spprcd.length;i++){
+                if(!spprcd[i].equals("00000000")){
+                    spprlist.add(spprcd[i]);
+                }
+            }
+        }
+        if(slcd.length==2){
+            for(int i=0;i<slcd.length;i++){
+                if(!slcd[i].equals("00000000")){
+                    sllist.add(slcd[i]);
+                }
+            }
+        }
+        if(wycd.length==2){
+            for(int i=0;i<wycd.length;i++){
+                if(!wycd[i].equals("00000000")){
+                    wylist.add(wycd[i]);
+                }
+            }
+        }
+        int count=damSafeDao.getSpprAllCount(mstm,spprlist,sllist,wylist);
+        if(count>0){
+            logger.info(stcd+":此观测时间的大坝安全监测数据已存在！");
+            return false;
+        }else{
+            return true;
+        }
+    }
     //渗流压力监测信息分析
     public void sppranalysis(String stcd, Date mstm, String[] spprcd, BigDecimal[] sywm){
         if(spprcd.length==1){
@@ -37,6 +71,7 @@ public class DamSafeService {
             }
         }
         damSafeDao.insertSpprInfo(stcd,spprlist);
+        logger.info(stcd+":渗压水位监测数据入库！");
     }
     //渗流量监测数据分析
     public void spprlanalysis(String stcd, Date mstm, String[] slcd,BigDecimal[] sll){
@@ -54,6 +89,7 @@ public class DamSafeService {
             }
         }
         damSafeDao.insertSpprLInfo(stcd,spprllist);
+        logger.info(stcd+":渗流量监测数据入库！");
     }
     //表面变形监测数据分析
     public void srhrdsanalysis(String stcd, Date mstm,String[] wycd,BigDecimal[] xhr,BigDecimal[] yhr,BigDecimal[] vhr,BigDecimal[] eslg,BigDecimal[] nrlt,BigDecimal[] inel){
@@ -76,14 +112,17 @@ public class DamSafeService {
             }
         }
         damSafeDao.insertSrhvrdsInfo(stcd,listhrds);
+        logger.info(stcd+":表面变形监测数据入库！");
     }
     //该时间的站点的运行工况是否存在
     public boolean existStatus(String stcd,Date tm){
         int count=damSafeDao.getstatuscount(stcd,tm);
-        if(count>0)
+        if(count>0) {
+            logger.info(stcd + ":此时间的电压监测数据已存在！");
             return false;
-        else
+        }else {
             return true;
+        }
     }
     //运行工况监测数据分析（小时报）
     public void statusanalysis(String stcd,Date tm,String mcnel,String scnel,BigDecimal vol){
@@ -97,6 +136,7 @@ public class DamSafeService {
         status.setMmcsq(mcnel);
         status.setMscsq(scnel);
         damSafeDao.insertStatusInfo(status);
+        logger.info(stcd + ":电压监测数据入库！");
     }
     //运行工况监测数据分析（加报）
     public void statusanalysisAdd(String stcd,Date tm,BigDecimal vol){
@@ -108,6 +148,7 @@ public class DamSafeService {
         status.setVol(vol);
         status.setCs(1);
         damSafeDao.insertStatusInfoByAdd(status);
+        logger.info(stcd + ":电压监测数据入库！");
     }
     //监测站点通讯中断
     public void statuscomloss(String stcd,Date tm){
